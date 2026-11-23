@@ -6,10 +6,20 @@ import 'song.dart';
 
 typedef ArrangementSound = ({String clipId, String name, int durationMs});
 
-class ArrangementException implements Exception {
-  const ArrangementException(this.message);
+enum ArrangementFailure {
+  selection,
+  invalidResult,
+  timeout,
+  connection,
+  access,
+  quota,
+  unavailable,
+}
 
-  final String message;
+class ArrangementException implements Exception {
+  const ArrangementException(this.reason);
+
+  final ArrangementFailure reason;
 }
 
 class AiArranger {
@@ -31,7 +41,7 @@ class AiArranger {
     required String request,
   }) async {
     if (sounds.isEmpty || sounds.length > maxSounds) {
-      throw const ArrangementException('편곡에 쓸 소리를 1개 이상 12개 이하로 골라 주세요.');
+      throw const ArrangementException(ArrangementFailure.selection);
     }
     final byAlias = {
       for (final (index, sound) in sounds.indexed) 'sound${index + 1}': sound,
@@ -139,13 +149,11 @@ class AiArranger {
       }
       throw const FormatException('Invalid arrangement response');
     } on FormatException {
-      throw const ArrangementException(
-        'AI가 사용할 수 있는 배치를 만들지 못했어요. 다시 시도해 주세요.',
-      );
+      throw const ArrangementException(ArrangementFailure.invalidResult);
     } on TimeoutException {
-      throw const ArrangementException('AI 응답이 늦어지고 있어요. 잠시 뒤 다시 시도해 주세요.');
+      throw const ArrangementException(ArrangementFailure.timeout);
     } on IOException {
-      throw const ArrangementException('Gemini에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.');
+      throw const ArrangementException(ArrangementFailure.connection);
     } finally {
       client.close(force: true);
     }
@@ -166,15 +174,11 @@ class AiArranger {
       case 200:
         return utf8.decoder.bind(response).join();
       case 400 || 401 || 403:
-        throw const ArrangementException(
-          '요청을 처리하지 못했어요. 등록한 Gemini 키와 사용 권한을 확인해 주세요.',
-        );
+        throw const ArrangementException(ArrangementFailure.access);
       case 429:
-        throw const ArrangementException(
-          'Gemini 사용 한도에 도달했어요. 잠시 뒤 다시 시도해 주세요.',
-        );
+        throw const ArrangementException(ArrangementFailure.quota);
       default:
-        throw const ArrangementException('Gemini에서 응답하지 못했어요. 나중에 다시 시도해 주세요.');
+        throw const ArrangementException(ArrangementFailure.unavailable);
     }
   }
 }

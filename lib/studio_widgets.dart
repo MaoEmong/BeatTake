@@ -54,11 +54,12 @@ class StudioPanel extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: studioSurface,
+  Widget build(BuildContext context) => Material(
+    color: studioSurface,
+    clipBehavior: Clip.antiAlias,
+    shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: studioBorder),
+      side: const BorderSide(color: studioBorder),
     ),
     child: Padding(padding: padding, child: child),
   );
@@ -140,15 +141,19 @@ class _WaveformPainter extends CustomPainter {
         Paint()..color = color.withValues(alpha: .12),
       );
     }
-    if (levels.isEmpty) return;
-    final interval = size.width / levels.length;
+    if (levels.isEmpty || size.width <= 0) return;
+    final bars = math.min(levels.length, math.max(1, size.width ~/ 2));
+    final interval = size.width / bars;
     final paint = Paint()
       ..strokeWidth = math.max(1, interval * .55)
       ..strokeCap = StrokeCap.round;
-    for (var index = 0; index < levels.length; index++) {
-      final position = (index + .5) / levels.length;
+    for (var index = 0; index < bars; index++) {
+      final position = (index + .5) / bars;
       final x = position * size.width;
-      final amplitude = math.max(1.0, levels[index] * center * .9);
+      final amplitude = math.max(
+        1.0,
+        levels[(position * levels.length).floor()] * center * .9,
+      );
       final selected =
           range == null || (position >= range.start && position <= range.end);
       paint.color = selected ? color : color.withValues(alpha: .37);

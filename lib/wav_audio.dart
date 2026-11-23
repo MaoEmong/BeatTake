@@ -10,6 +10,8 @@ class WavFile {
   final int frames;
   final int _dataOffset;
 
+  int get durationMs => (frames * 1000 / sampleRate).ceil();
+
   // Editing and mixing create an in-memory preview. Keep it small enough for
   // phones with limited memory, even when the original recording is longer.
   static const maxPreviewSeconds = 300;
@@ -100,6 +102,29 @@ class WavFile {
     }
     final input = readFrames(start, end);
     return changeRate(input, rate);
+  }
+
+  List<double> peaks({int bars = 60}) {
+    final file = File(path).openSync();
+    try {
+      return List.generate(bars, (index) {
+        final start = frames * index ~/ bars;
+        final end = math.max(start + 1, frames * (index + 1) ~/ bars);
+        // Read from the middle of each bar's range to keep long previews inexpensive.
+        final length = math.min(end - start, 512);
+        file.setPositionSync(
+          _dataOffset + (start + (end - start - length) ~/ 2) * 2,
+        );
+        final bytes = ByteData.sublistView(file.readSync(length * 2));
+        var peak = 0;
+        for (var offset = 0; offset + 2 <= bytes.lengthInBytes; offset += 2) {
+          peak = math.max(peak, bytes.getInt16(offset, Endian.little).abs());
+        }
+        return peak / 32768;
+      });
+    } finally {
+      file.closeSync();
+    }
   }
 
   static Int16List changeRate(Int16List input, double rate) {

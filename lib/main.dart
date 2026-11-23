@@ -1,529 +1,320 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:record/record.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'ai_settings_page.dart';
-import 'clip_editor_page.dart';
+import 'ai_studio_page.dart';
+import 'app_preferences.dart';
+import 'copy.dart';
+import 'recorder_page.dart';
 import 'recording_store.dart';
+import 'settings_page.dart';
 import 'song_store.dart';
 import 'songs_page.dart';
+import 'sounds_page.dart';
+import 'studio_widgets.dart';
+import 'track_editor_page.dart';
 
 void main() => runApp(const EverydayBeatsApp());
 
-class EverydayBeatsApp extends StatelessWidget {
-  const EverydayBeatsApp({super.key});
+class EverydayBeatsApp extends StatefulWidget {
+  const EverydayBeatsApp({
+    super.key,
+    this.openRecordings = RecordingStore.open,
+  });
+
+  final Future<RecordingStore> Function() openRecordings;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Everyday Beats',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFC8F578),
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: const Color(0xFF111410),
-      ),
-      home: const RecordingsPage(),
-    );
-  }
+  State<EverydayBeatsApp> createState() => _EverydayBeatsAppState();
 }
 
-class RecordingsPage extends StatefulWidget {
-  const RecordingsPage({super.key});
-
-  @override
-  State<RecordingsPage> createState() => _RecordingsPageState();
-}
-
-class _RecordingsPageState extends State<RecordingsPage> {
-  final _recorder = AudioRecorder();
-  final _player = AudioPlayer();
-  final _clock = Stopwatch();
-
-  late final AppLifecycleListener _lifecycle;
-  late final StreamSubscription<void> _playbackComplete;
-  RecordingStore? _store;
-  File? _activeDraft;
-  Timer? _ticker;
-  String? _playingPath;
-  List<SavedRecording> _recordings = [];
-  List<SavedRecording> _clips = [];
-  bool _busy = true;
-  String? _status;
+class _EverydayBeatsAppState extends State<EverydayBeatsApp> {
+  final _store = const PreferenceStore();
+  AppPreferences? _preferences;
 
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(
-      onPause: () {
-        if (_activeDraft != null && !_busy) {
-          unawaited(_finishRecording());
-        }
-      },
-    );
-    _playbackComplete = _player.onPlayerComplete.listen((_) {
-      if (mounted) {
-        setState(() => _playingPath = null);
-      }
-    });
-    unawaited(_loadRecordings());
+    unawaited(_restore());
   }
 
-  Future<void> _loadRecordings() async {
-    setState(() {
-      _busy = true;
-      _status = null;
-    });
+  Future<void> _restore() async {
     try {
-      final store = await RecordingStore.open();
-      final recordings = await store.list();
-      final clips = await store.listClips();
-      if (mounted) {
-        setState(() {
-          _store = store;
-          _recordings = recordings;
-          _clips = clips;
-        });
-      }
-    } catch (error, stack) {
-      debugPrint('Cannot load recordings: $error\n$stack');
-      if (mounted) {
-        setState(() => _status = '저장된 녹음을 불러오지 못했어요.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  Future<void> _startRecording() async {
-    final store = _store;
-    if (_busy || _activeDraft != null || store == null) {
-      return;
-    }
-
-    setState(() {
-      _busy = true;
-      _status = null;
-    });
-    try {
-      if (!await _recorder.hasPermission()) {
-        if (mounted) {
-          setState(() => _status = '녹음하려면 설정에서 마이크 사용을 허용해 주세요.');
-        }
-        return;
-      }
-
-      await _player.stop();
-      if (!mounted) return;
-      setState(() => _playingPath = null);
-
-      final draft = store.newDraft();
-      await _recorder.start(
-        const RecordConfig(
-          encoder: AudioEncoder.wav,
-          sampleRate: 44100,
-          numChannels: 1,
-        ),
-        path: draft.path,
-      );
-      if (!mounted) return;
-      _clock
-        ..reset()
-        ..start();
-      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted) setState(() {});
-      });
-      setState(() => _activeDraft = draft);
-    } catch (error, stack) {
-      debugPrint('Cannot start recording: $error\n$stack');
-      if (mounted) {
-        setState(() => _status = '녹음을 시작하지 못했어요. 다시 시도해 주세요.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-        if (_activeDraft != null &&
-            WidgetsBinding.instance.lifecycleState ==
-                AppLifecycleState.paused) {
-          unawaited(_finishRecording());
-        }
-      }
-    }
-  }
-
-  Future<void> _finishRecording() async {
-    final draft = _activeDraft;
-    final store = _store;
-    if (_busy || draft == null || store == null) {
-      return;
-    }
-
-    _ticker?.cancel();
-    _clock.stop();
-    setState(() {
-      _busy = true;
-      _status = '녹음을 저장하는 중…';
-    });
-    try {
-      await _recorder.stop();
-      final recording = await store.save(draft);
-      if (mounted) {
-        setState(() {
-          _recordings.insert(0, recording);
-          _status = '휴대폰에 저장했어요.';
-        });
-      }
-    } catch (error, stack) {
-      debugPrint('Cannot finish recording: $error\n$stack');
-      if (mounted) {
-        setState(() => _status = '녹음을 저장하지 못했어요. 다시 녹음해 주세요.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _activeDraft = null;
-          _busy = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _togglePlayback(SavedRecording recording) async {
-    if (_busy || _activeDraft != null) {
-      return;
-    }
-
-    final path = recording.file.path;
-    final shouldStop = _playingPath == path;
-    setState(() {
-      _busy = true;
-      _status = null;
-    });
-    try {
-      await _player.stop();
-      if (!mounted) return;
-      setState(() => _playingPath = shouldStop ? null : path);
-      if (!shouldStop) {
-        await _player.play(DeviceFileSource(path, mimeType: 'audio/wav'));
-      }
-    } catch (error, stack) {
-      debugPrint('Cannot play recording: $error\n$stack');
-      if (mounted) {
-        setState(() {
-          _playingPath = null;
-          _status = '이 녹음을 재생하지 못했어요.';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  Future<void> _editRecording(SavedRecording recording) async {
-    final store = _store;
-    if (_busy || _activeDraft != null || store == null) return;
-    setState(() => _busy = true);
-    try {
-      await _player.stop();
-      if (!mounted) return;
-      setState(() => _playingPath = null);
-      final saved = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ClipEditorPage(recording: recording, store: store),
-        ),
-      );
-      if (saved == true) {
-        final clips = await store.listClips();
-        if (mounted) setState(() => _clips = clips);
-      }
+      final preferences = await _store.load();
+      if (mounted) setState(() => _preferences = preferences);
     } catch (_) {
-      if (mounted) setState(() => _status = '다듬은 소리 목록을 불러오지 못했어요.');
-    } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _preferences = const AppPreferences());
     }
-  }
-
-  Future<void> _openPage(Widget page, String errorMessage) async {
-    if (_busy || _activeDraft != null) return;
-    setState(() => _busy = true);
-    try {
-      await _player.stop();
-      if (!mounted) return;
-      setState(() => _playingPath = null);
-      await Navigator.push<void>(
-        context,
-        MaterialPageRoute(builder: (_) => page),
-      );
-    } catch (_) {
-      if (mounted) setState(() => _status = errorMessage);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _deleteSound(
-    SavedRecording sound, {
-    required bool edited,
-  }) async {
-    final store = _store;
-    if (store == null || _busy || _activeDraft != null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(edited ? '다듬은 소리를 삭제할까요?' : '원본 녹음을 삭제할까요?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted || confirmed != true) return;
-    setState(() => _busy = true);
-    try {
-      if (edited && await SongStore(store.directory).usesClip(sound.id)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('저장한 곡에서 이 소리의 배치를 먼저 지워 주세요.')),
-          );
-        }
-        return;
-      }
-      if (_playingPath == sound.file.path) {
-        await _player.stop();
-        if (mounted) setState(() => _playingPath = null);
-      }
-      await store.delete(sound, edited: edited);
-      if (mounted) {
-        setState(() => (edited ? _clips : _recordings).remove(sound));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('소리를 삭제하지 못했어요.')));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    _lifecycle.dispose();
-    _ticker?.cancel();
-    unawaited(_playbackComplete.cancel());
-    unawaited(_recorder.dispose());
-    unawaited(_player.dispose());
-    super.dispose();
-  }
-
-  String _recordingTime() {
-    final elapsed = _clock.elapsed;
-    final mins = elapsed.inMinutes.toString().padLeft(2, '0');
-    final secs = elapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$mins:$secs';
-  }
-
-  String _recordingDate(DateTime time) {
-    final date = MaterialLocalizations.of(context).formatMediumDate(time);
-    final clock = MaterialLocalizations.of(context).formatTimeOfDay(
-      TimeOfDay.fromDateTime(time),
-      alwaysUse24HourFormat: true,
-    );
-    return '$date · $clock';
-  }
-
-  Widget _soundTile(
-    SavedRecording sound,
-    String title, {
-    bool editable = false,
-  }) {
-    final enabled = !_busy && _activeDraft == null;
-    final playing = _playingPath == sound.file.path;
-    return Card(
-      margin: const EdgeInsets.only(top: 8),
-      child: ListTile(
-        key: ValueKey(sound.file.path),
-        title: Text(sound.name ?? title),
-        subtitle: Text(_recordingDate(sound.recordedAt)),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (editable)
-              IconButton(
-                tooltip: '녹음 다듬기',
-                icon: const Icon(Icons.content_cut),
-                onPressed: enabled ? () => _editRecording(sound) : null,
-              ),
-            IconButton(
-              tooltip: playing ? '재생 정지' : '재생',
-              isSelected: playing,
-              icon: const Icon(Icons.play_arrow_rounded),
-              selectedIcon: const Icon(Icons.stop_rounded),
-              onPressed: enabled ? () => _togglePlayback(sound) : null,
-            ),
-            IconButton(
-              tooltip: '소리 삭제',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: enabled
-                  ? () => _deleteSound(sound, edited: !editable)
-                  : null,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final store = _store;
-    final isRecording = _activeDraft != null;
-    final recordColor = isRecording
-        ? const Color(0xFFFF9485)
-        : const Color(0xFFC8F578);
+    final preferences = _preferences;
+    return MaterialApp(
+      title: 'Everyday Beats',
+      debugShowCheckedModeBanner: false,
+      theme: studioTheme,
+      locale: (preferences?.language ?? AppLanguage.en).locale,
+      supportedLocales: AppLanguage.values.map((language) => language.locale),
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      home: preferences == null
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          : _StudioShell(
+              openRecordings: widget.openRecordings,
+              preferences: preferences,
+              preferenceStore: _store,
+              onPreferencesChanged: (value) {
+                if (mounted) setState(() => _preferences = value);
+              },
+            ),
+    );
+  }
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Everyday Beats'),
-        backgroundColor: Colors.transparent,
-        actions: [
-          IconButton(
-            tooltip: '내 곡',
-            onPressed: _busy || isRecording || store == null
-                ? null
-                : () => _openPage(
-                    SongsPage(clips: _clips, store: SongStore(store.directory)),
-                    '곡 목록을 열지 못했어요.',
-                  ),
-            icon: const Icon(Icons.library_music_outlined),
-          ),
-          IconButton(
-            tooltip: 'AI 설정',
-            onPressed: _busy || isRecording
-                ? null
-                : () => _openPage(const AiSettingsPage(), 'AI 설정을 열지 못했어요.'),
-            icon: const Icon(Icons.settings_outlined),
-          ),
-        ],
-      ),
-      bottomNavigationBar: const SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.all(8),
-          child: Text(
-            'Built for Vibe Forge by Everyday Beats',
-            textAlign: TextAlign.center,
-          ),
+enum _Section {
+  home(L.home, Icons.home_outlined, Icons.home_rounded),
+  sounds(L.sounds, Icons.graphic_eq, Icons.graphic_eq),
+  songs(L.songs, Icons.library_music_outlined, Icons.library_music_rounded),
+  ai(L.ai, Icons.auto_awesome_outlined, Icons.auto_awesome_rounded),
+  settings(L.settings, Icons.settings_outlined, Icons.settings_rounded);
+
+  const _Section(this.label, this.icon, this.selectedIcon);
+
+  final L label;
+  final IconData icon;
+  final IconData selectedIcon;
+}
+
+class _StudioShell extends StatefulWidget {
+  const _StudioShell({
+    required this.openRecordings,
+    required this.preferences,
+    required this.preferenceStore,
+    required this.onPreferencesChanged,
+  });
+
+  final Future<RecordingStore> Function() openRecordings;
+  final AppPreferences preferences;
+  final PreferenceStore preferenceStore;
+  final ValueChanged<AppPreferences> onPreferencesChanged;
+
+  @override
+  State<_StudioShell> createState() => _StudioShellState();
+}
+
+class _StudioShellState extends State<_StudioShell> {
+  late Future<RecordingStore> _library = widget.openRecordings();
+  _Section _selected = _Section.home;
+  SoundTab _tab = SoundTab.originals;
+  bool _openingSong = false;
+  L? _homeError;
+
+  void _select(_Section section) => setState(() => _selected = section);
+
+  Future<void> _record(RecordingStore store) async {
+    final tab = await Navigator.push<SoundTab>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RecorderPage(
+          store: store,
+          openEditor: widget.preferences.openEditor,
         ),
       ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => Center(
-            child: SizedBox(
-              width: 640,
-              height: constraints.maxHeight,
+    );
+    if (mounted && tab != null) {
+      setState(() {
+        _tab = tab;
+        _selected = _Section.sounds;
+      });
+    }
+  }
+
+  Future<void> _makeSong(RecordingStore store) async {
+    if (_openingSong) return;
+    setState(() {
+      _openingSong = true;
+      _homeError = null;
+    });
+    try {
+      final clips = await store.listClips();
+      if (!mounted || _selected != _Section.home) return;
+      final saved = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              TrackEditorPage(clips: clips, store: SongStore(store.directory)),
+        ),
+      );
+      if (mounted && saved == true) _select(_Section.songs);
+    } catch (_) {
+      if (mounted) setState(() => _homeError = L.storageError);
+    } finally {
+      if (mounted) setState(() => _openingSong = false);
+    }
+  }
+
+  Widget _content() {
+    if (_selected == _Section.settings) {
+      return SettingsPage(
+        preferences: widget.preferences,
+        store: widget.preferenceStore,
+        onChanged: widget.onPreferencesChanged,
+      );
+    }
+    return FutureBuilder<RecordingStore>(
+      future: _library,
+      builder: (context, snapshot) {
+        final store = snapshot.data;
+        if (store == null) {
+          if (!snapshot.hasError) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return StudioList(
+            title: _selected.label(context),
+            children: [
+              StudioPanel(child: Text(L.storageError(context))),
+              OutlinedButton(
+                onPressed: () =>
+                    setState(() => _library = widget.openRecordings()),
+                child: Text(L.tryAgain(context)),
+              ),
+            ],
+          );
+        }
+        return switch (_selected) {
+          _Section.home => _Home(
+            onRecord: () => _record(store),
+            onMake: _openingSong ? null : () => _makeSong(store),
+            onAi: () => _select(_Section.ai),
+            error: _homeError,
+          ),
+          _Section.sounds => SoundsPage(store: store, initialTab: _tab),
+          _Section.songs => SongsPage(recordings: store),
+          _Section.ai => AiStudioPage(
+            store: store,
+            preferences: widget.preferenceStore,
+            openSettings: () => _select(_Section.settings),
+            onSaved: () => _select(_Section.songs),
+          ),
+          _Section.settings => const SizedBox.shrink(),
+        };
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: MediaQuery.sizeOf(context).width >= 700 ? 100 : 72,
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                color: Color(0xff1d221e),
+                border: Border(right: BorderSide(color: studioBorder)),
+              ),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
                 children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1C2219),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: colors.outlineVariant),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          Text(
-                            '소리 녹음',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                  const ExcludeSemantics(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          'e.',
+                          style: TextStyle(
+                            color: studioAccent,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            height: 1.1,
                           ),
-                          const SizedBox(height: 20),
-                          FilledButton(
-                            key: const ValueKey('record-button'),
-                            onPressed: _busy || _store == null
-                                ? null
-                                : isRecording
-                                ? _finishRecording
-                                : _startRecording,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: recordColor,
-                              foregroundColor: const Color(0xFF171B14),
-                              fixedSize: const Size(88, 88),
-                              shape: const CircleBorder(),
-                              padding: EdgeInsets.zero,
-                            ),
-                            child: Icon(
-                              isRecording
-                                  ? Icons.stop_rounded
-                                  : Icons.mic_rounded,
-                              size: 36,
-                              semanticLabel: isRecording ? '녹음 정지' : '녹음 시작',
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            isRecording ? _recordingTime() : '녹음 시작',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          if (_status case final status?) ...[
-                            const SizedBox(height: 10),
-                            Semantics(
-                              liveRegion: true,
-                              child: Text(status, textAlign: TextAlign.center),
-                            ),
-                          ],
-                          if (_store == null && !_busy)
-                            TextButton(
-                              onPressed: _loadRecordings,
-                              child: const Text('다시 불러오기'),
-                            ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
-                  Text('저장한 녹음', style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  if (_recordings.isEmpty && _store != null)
-                    Text(
-                      '녹음을 마치면 여기에 표시돼요.',
-                      style: TextStyle(color: colors.onSurfaceVariant),
+                  for (final section in _Section.values)
+                    _RailButton(
+                      section: section,
+                      selected: section == _selected,
+                      onPressed: () => _select(section),
                     ),
-                  for (final (index, recording) in _recordings.indexed)
-                    _soundTile(
-                      recording,
-                      '녹음 ${_recordings.length - index}',
-                      editable: true,
-                    ),
-                  const SizedBox(height: 28),
-                  Text('다듬은 소리', style: theme.textTheme.titleLarge),
-                  if (_clips.isEmpty) const Text('녹음을 다듬어 저장하면 여기에 표시돼요.'),
-                  for (final (index, clip) in _clips.indexed)
-                    _soundTile(clip, '다듬은 소리 ${_clips.length - index}'),
                 ],
+              ),
+            ),
+          ),
+          Expanded(child: _content()),
+        ],
+      ),
+    ),
+  );
+}
+
+class _RailButton extends StatelessWidget {
+  const _RailButton({
+    required this.section,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final _Section section;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = section.label(context);
+    final textColor = selected
+        ? studioAccent
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: Material(
+          color: selected ? const Color(0xff293623) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: onPressed,
+            child: ExcludeSemantics(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 61),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 6,
+                    horizontal: 2,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        selected ? section.selectedIcon : section.icon,
+                        size: 22,
+                        color: textColor,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 11,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -531,4 +322,169 @@ class _RecordingsPageState extends State<RecordingsPage> {
       ),
     );
   }
+}
+
+class _Home extends StatelessWidget {
+  const _Home({
+    required this.onRecord,
+    required this.onMake,
+    required this.onAi,
+    required this.error,
+  });
+
+  final VoidCallback onRecord;
+  final VoidCallback? onMake;
+  final VoidCallback onAi;
+  final L? error;
+
+  static const _mark = [
+    .15,
+    .28,
+    .19,
+    .43,
+    .37,
+    .63,
+    .84,
+    .52,
+    .29,
+    .41,
+    .66,
+    .86,
+    .53,
+    .32,
+    .62,
+    .37,
+    .23,
+    .14,
+    .22,
+    .11,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final type = Theme.of(context).textTheme;
+    return StudioList(
+      children: [
+        const SizedBox(height: 8),
+        const Text(
+          'Everyday\nBeats.',
+          style: TextStyle(
+            fontSize: 40,
+            height: .97,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -2.2,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(L.homeIntro(context), style: type.bodyMedium),
+        const SizedBox(height: 22),
+        Semantics(
+          button: true,
+          label: L.recordSound(context),
+          child: Material(
+            color: studioAccent,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onRecord,
+              child: ExcludeSemantics(
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Icon(
+                          Icons.mic_rounded,
+                          color: Color(0xff202a19),
+                          size: 23,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        L.recordSound(context),
+                        style: type.headlineSmall?.copyWith(
+                          color: const Color(0xff202a19),
+                          fontWeight: FontWeight.w900,
+                          height: 1.05,
+                        ),
+                      ),
+                      const SizedBox(height: 9),
+                      Text(
+                        L.homeRecordHelp(context),
+                        style: const TextStyle(
+                          color: Color(0xff34432a),
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Waveform(
+                        levels: _mark,
+                        height: 34,
+                        color: Color(0xff526740),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        _HomeAction(
+          icon: Icons.library_music_outlined,
+          label: L.makeSong(context),
+          detail: L.homeSongHelp(context),
+          onTap: onMake,
+        ),
+        const SizedBox(height: 8),
+        _HomeAction(
+          icon: Icons.auto_awesome_outlined,
+          label: L.makeAiSong(context),
+          detail: L.homeAiHelp(context),
+          onTap: onAi,
+        ),
+        if (error case final message?)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(message(context)),
+          ),
+        const SizedBox(height: 20),
+        Text(
+          L.forgeCredit(context),
+          style: type.labelSmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeAction extends StatelessWidget {
+  const _HomeAction({
+    required this.icon,
+    required this.label,
+    required this.detail,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String detail;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => StudioPanel(
+    padding: EdgeInsets.zero,
+    child: ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      leading: Icon(icon, color: studioAccent),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+      subtitle: Text(detail),
+      trailing: const Icon(Icons.north_east, size: 16),
+    ),
+  );
 }
