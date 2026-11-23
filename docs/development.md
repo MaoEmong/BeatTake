@@ -12,6 +12,7 @@ flutter analyze
 flutter test
 flutter run
 flutter build apk --debug
+flutter build apk --release
 ```
 
 이 Windows PC에서는 `C:\flutter`의 설치 파일 일부가 빠져 있었다. 마지막으로 통과한 빌드는 `E:\portfolio\ieum\.build-tools\flutter\bin\flutter.bat`을 사용했다. Android SDK를 같은 위치에 둔 상태라면 다음처럼 실행할 수 있다.
@@ -25,7 +26,7 @@ $vibeFlutter = 'E:\portfolio\ieum\.build-tools\flutter\bin\flutter.bat'
 & $vibeFlutter build apk --debug
 ```
 
-- 마지막으로 빌드한 Android 설치 파일은 `build/app/outputs/flutter-apk/app-debug.apk`에 있다.
+- 안드로이드 설치 파일은 `build/app/outputs/flutter-apk/app-release.apk`에 있다. 현재 프로젝트의 기본 테스트 서명으로 만든 설치용 파일이다. 개발 중 화면과 오류를 확인할 때는 같은 폴더의 `app-debug.apk`를 사용한다.
 - Android 빌드에는 SDK 35와 36, NDK 28.2.13676358, CMake 3.22.1을 사용했다.
 - 코드와 패키지가 각각 E 드라이브와 C 드라이브에 있어 발생했던 Android 빌드 오류를 피하도록 `android/gradle.properties`에 `kotlin.incremental=false`를 설정했다.
 - iOS는 마이크 사용 권한 문구가 들어가 있다. 빌드와 기기 확인에는 macOS의 Xcode 환경이 필요하다.
@@ -50,9 +51,10 @@ $vibeFlutter = 'E:\portfolio\ieum\.build-tools\flutter\bin\flutter.bat'
 
 AI 편곡에는 개인 Gemini 키가 필요하다. 키는 기기의 보안 저장소에 보관하고, 편곡을 요청할 때 선택한 소리의 이름과 길이, 사용자가 입력한 요청만 Gemini에 보낸다. 배치안을 받아도 곡 파일에는 **곡 저장**을 눌렀을 때 반영된다.
 
-## 확인 결과
+## 작업 단계별 확인 결과
 
-- `flutter analyze`를 통과했고 `flutter test`의 두 테스트가 통과했다.
-- Android 15 가상 휴대폰에 설치한 뒤 마이크 권한 허용, 녹음, 정지, 파일 저장을 확인했다.
-- 앱을 강제로 종료했다 다시 열어 저장한 파일이 목록에 표시되고 재생되는 것을 확인했다. 저장된 WAV의 길이와 형식도 확인했다.
-- 실제 휴대폰의 마이크와 iOS 빌드 및 재생은 확인 전이다.
+- **녹음**은 Android 15 가상 휴대폰에서 마이크 권한 허용, 녹음 정지 후 저장, 앱 재시작 후 목록에서 다시 열기를 확인했다.
+- **소리 편집**은 구간을 줄이고 음을 높여 미리 듣고, 다른 이름으로 저장한 뒤 원본과 다듬은 소리가 함께 남는 것을 확인했다. 한 옥타브를 높이거나 낮출 때의 소리 데이터와 길이도 자동 검사로 확인했다.
+- **트랙과 곡 관리**는 서로 다른 두 트랙을 합친 재생 파일을 만들고, 배치를 수정해 저장한 뒤 앱 재시작 후에도 바뀐 트랙 위치를 표시하는 것을 확인했다. 사용하는 곡이 있는 동안에는 소리 삭제를 막고, 곡을 삭제한 뒤에는 소리가 지워지는 것도 확인했다.
+- **AI 편곡**은 시험용 응답으로 사용자가 고른 소리만 배치하며, 목록에 없는 소리를 돌려받으면 결과를 거부하는지 확인했다. 가상 휴대폰에서는 설치본을 업데이트해도 시험용 키가 유지되고, 편곡에 쓸 소리를 고르는 화면이 열리는 것을 확인했다. 실제 Gemini 키로 응답을 받는 검사는 남아 있다.
+- **공통 검사**로 `flutter analyze`와 자동 검사 7개가 통과했다. 안드로이드 설치 파일의 서명을 확인하고, 가상 휴대폰에 설치해 앱을 실행했다. 실제 휴대폰의 마이크와 iOS 빌드 및 재생은 확인 전이다.
