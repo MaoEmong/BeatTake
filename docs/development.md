@@ -35,11 +35,14 @@ $vibeFlutter = 'E:\portfolio\ieum\.build-tools\flutter\bin\flutter.bat'
 
 | 위치 | 하는 일 |
 | --- | --- |
-| [lib/main.dart](../lib/main.dart) | 녹음 화면, 마이크 권한 요청, 녹음 시작·정지, 녹음 목록과 재생을 담당한다. |
+| [lib/main.dart](../lib/main.dart) | 홈, 왼쪽 메뉴, 화면 이동과 앱 언어를 담당한다. |
+| [lib/recorder_page.dart](../lib/recorder_page.dart), [lib/clip_editor_page.dart](../lib/clip_editor_page.dart) | 녹음과 원본 저장, 구간 자르기, 음 높이 조절과 미리 듣기를 담당한다. |
 | [lib/recording_store.dart](../lib/recording_store.dart) | 녹음 파일을 저장하고, 앱이 다시 열릴 때 목록을 읽는다. |
 | [lib/wav_audio.dart](../lib/wav_audio.dart) | 녹음 파일에서 선택 구간을 읽고 음 높이를 바꾼다. |
 | [lib/song.dart](../lib/song.dart), [lib/song_store.dart](../lib/song_store.dart) | 각 소리의 배치에 맞춰 합친 재생 파일을 만들고, 곡의 배치를 저장한다. |
 | [lib/ai_arranger.dart](../lib/ai_arranger.dart) | Gemini에 배치안을 요청하고 앱에서 쓸 수 있는 결과인지 검사한다. |
+| [lib/track_editor_page.dart](../lib/track_editor_page.dart) | 곡의 전체 배치와 선택한 트랙을 보여 주고, 소리의 트랙과 시작 시간을 바꾼다. |
+| [lib/settings_page.dart](../lib/settings_page.dart), [lib/copy.dart](../lib/copy.dart) | 설정, 언어별 앱 문구, Gemini 키 등록을 담당한다. |
 | [test/recording_store_test.dart](../test/recording_store_test.dart) | 새로 저장소를 열었을 때 파일을 다시 찾는지, 빈 녹음이 목록에 올라오지 않는지 확인한다. |
 | [pubspec.yaml](../pubspec.yaml) | 녹음은 `record`, 재생은 `audioplayers`, 앱 저장 위치 확인은 `path_provider`를 사용한다. |
 
@@ -50,6 +53,22 @@ $vibeFlutter = 'E:\portfolio\ieum\.build-tools\flutter\bin\flutter.bat'
 다듬은 소리는 `recordings/clips/`에 별도 WAV 파일로 저장한다. 음을 높이면 소리가 짧아지고, 낮추면 길어진다. 편집해서 저장하거나 곡으로 재생할 수 있는 길이는 최대 5분이다. 곡의 이름과 각 소리의 트랙 및 시작 시간은 `recordings/songs/`에 저장한다. 저장된 곡에 들어 있는 소리를 삭제하려면 해당 곡에서 배치를 먼저 지운다.
 
 AI 편곡에는 개인 Gemini 키가 필요하다. 키는 기기의 보안 저장소에 보관하고, 편곡을 요청할 때 선택한 소리의 이름과 길이, 사용자가 입력한 요청만 Gemini에 보낸다. 배치안을 받아도 곡 파일에는 **곡 저장**을 눌렀을 때 반영된다.
+
+## 트랙 렌즈 1차 MVP
+
+- 홈과 보관함에서는 왼쪽 메뉴를 사용한다. 녹음, 소리 다듬기, 곡 편집은 작업 공간을 넓게 쓰도록 화면 전체를 사용한다.
+- 곡 편집 화면에서는 위쪽에 모든 트랙의 배치를 표시하고, 아래쪽에서는 선택한 트랙의 소리와 파형을 크게 보여 준다. 소리를 놓기 전에 곡이 5분 안에 들어오는지 확인한다.
+- 영어가 기본이고 한국어, 일본어, 중국어 간체를 선택할 수 있다. 언어와 녹음 후 다듬기 화면 자동 열기 설정은 앱을 다시 열어도 유지된다.
+- 원본 녹음, 다듬은 소리, 저장한 곡은 기존 저장 형식을 그대로 읽는다. AI 제작 화면에서 받은 배치안은 직접 제작과 같은 편집 화면으로 열린다.
+
+### 1차 MVP 설치본 확인
+
+- `flutter analyze`와 자동 검사 9개가 통과했고, 안드로이드 설치 파일을 만들어 Android 15 가상 휴대폰에서 열었다.
+- 녹음 후 자동으로 다듬기 화면을 열고, 설정을 끄면 원본 보관함으로 이동하는 것을 확인했다. 녹음 중 휴대폰 홈으로 나갔다 약 0.15초 뒤 돌아오는 상황에서도 녹음이 저장됐다.
+- 녹음 두 개를 다듬어 따로 저장하고 두 트랙에 배치했다. 곡을 저장하고 앱을 다시 열었을 때 두 번째 트랙의 시작 위치 0.50초가 유지됐고, 곡 보관함에서 재생할 수 있었다. 소리 끝이 5분을 넘기는 배치는 저장 전에 차단됐다.
+- 곡 이름을 입력하는 키보드가 화면에 떠 있어도 재생과 소리 추가 버튼이 키보드 위에 표시된다. 소리 추가를 연달아 열고 곡을 저장할 수 있었다.
+- 자동 검사에서 화면 언어 네 가지를 확인했다. 가상 휴대폰에서 한국어로 바꾸고 앱을 다시 실행했을 때 한국어가 유지됐으며, 영어로 되돌릴 수 있었다.
+- 가상 휴대폰에서 Gemini 키 등록 전 안내와 인터넷이 끊겼을 때의 안내를 확인했다. 자동 검사에서 시험용 응답을 처리했다. 실제 Gemini 키를 사용한 편곡과 실제 휴대폰의 마이크, iOS 빌드 및 재생은 확인 전이다.
 
 ## 작업 단계별 확인 결과
 
