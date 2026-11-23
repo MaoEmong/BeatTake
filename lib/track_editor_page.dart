@@ -111,6 +111,7 @@ class _TrackEditorPageState extends State<TrackEditorPage> {
         if (details.containsKey(entry.key)) entry.key: entry.value,
     };
     if (available.isEmpty) return;
+    FocusScope.of(context).unfocus();
     final placement = await showDialog<SoundPlacement>(
       context: context,
       builder: (_) => _PlacementDialog(
@@ -192,6 +193,7 @@ class _TrackEditorPageState extends State<TrackEditorPage> {
                 controller: _name,
                 enabled: canEdit,
                 maxLength: 40,
+                onTapOutside: (_) => FocusScope.of(context).unfocus(),
                 decoration: InputDecoration(labelText: L.songName(context)),
               ),
               const SizedBox(height: 10),
@@ -330,7 +332,12 @@ class _TrackEditorPageState extends State<TrackEditorPage> {
           ),
           bottomNavigationBar: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 6, 14, 12),
+              padding: EdgeInsets.fromLTRB(
+                14,
+                6,
+                14,
+                12 + MediaQuery.viewInsetsOf(context).bottom,
+              ),
               child: Row(
                 children: [
                   IconButton.filled(
