@@ -1,4 +1,3 @@
-import 'package:everyday_beats/ai_provider.dart';
 import 'package:everyday_beats/app_preferences.dart';
 import 'package:everyday_beats/copy.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -25,32 +24,32 @@ void main() {
   );
 
   test(
-    'upgrades Gemini settings and stores provider keys independently',
+    'upgrades previous AI settings and retains the stored OpenAI key',
     () async {
       FlutterSecureStorage.setMockInitialValues({
-        'studio_preferences': '{"language":"ko","openEditor":false}',
+        'studio_preferences':
+            '{"language":"ko","openEditor":false,"aiProvider":"claude"}',
         'gemini_api_key': 'legacy-gemini-key',
+        'claude_api_key': 'legacy-claude-key',
+        'openai_api_key': 'legacy-openai-key',
       });
       const store = PreferenceStore();
       final previous = await store.load();
-      expect(previous.aiProvider, AiProvider.gemini);
-      expect(await store.readAiKey(AiProvider.gemini), 'legacy-gemini-key');
-      expect(await store.readAiKey(AiProvider.claude), isNull);
-      await store.saveAiKey(AiProvider.claude, 'claude-key');
-      await store.saveAiKey(AiProvider.openai, 'openai-key');
-      await store.save(previous.copyWith(aiProvider: AiProvider.openai));
+      expect(await store.readOpenAiKey(), 'legacy-openai-key');
+      await store.save(previous);
 
       const reopened = PreferenceStore();
       final preferences = await reopened.load();
-      expect(preferences.aiProvider, AiProvider.openai);
       expect(preferences.language, AppLanguage.ko);
       expect(preferences.openEditor, isFalse);
-      expect(await reopened.readAiKey(AiProvider.claude), 'claude-key');
-      expect(await reopened.readAiKey(AiProvider.openai), 'openai-key');
-      await reopened.saveAiKey(AiProvider.openai, null);
-      expect(await reopened.readAiKey(AiProvider.openai), isNull);
-      expect(await reopened.readAiKey(AiProvider.claude), 'claude-key');
-      expect(await reopened.readAiKey(AiProvider.gemini), 'legacy-gemini-key');
+      expect(await reopened.readOpenAiKey(), 'legacy-openai-key');
+      await reopened.saveOpenAiKey('replacement-openai-key');
+      expect(await reopened.readOpenAiKey(), 'replacement-openai-key');
+      await reopened.saveOpenAiKey(null);
+      expect(await reopened.readOpenAiKey(), isNull);
+      const storage = FlutterSecureStorage();
+      expect(await storage.read(key: 'gemini_api_key'), 'legacy-gemini-key');
+      expect(await storage.read(key: 'claude_api_key'), 'legacy-claude-key');
     },
   );
 }

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'ai_provider.dart';
 import 'app_preferences.dart';
 import 'copy.dart';
 import 'studio_widgets.dart';
@@ -37,21 +36,9 @@ class _SettingsPageState extends State<SettingsPage> {
     unawaited(_loadKey());
   }
 
-  @override
-  void didUpdateWidget(covariant SettingsPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.preferences.aiProvider != widget.preferences.aiProvider) {
-      _input.clear();
-      _hasKey = false;
-      _keyMessage = null;
-      _changingKey = true;
-      unawaited(_loadKey());
-    }
-  }
-
   Future<void> _loadKey() async {
     try {
-      final key = await widget.store.readAiKey(widget.preferences.aiProvider);
+      final key = await widget.store.readOpenAiKey();
       if (mounted) setState(() => _hasKey = key?.isNotEmpty == true);
     } catch (_) {
       if (mounted) setState(() => _keyMessage = L.keyLoadFailed);
@@ -78,7 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _setKey({bool remove = false}) async {
-    if (_changingKey || _changingPreferences) return;
+    if (_changingKey) return;
     final key = _input.text.trim();
     if (!remove && (key.isEmpty || RegExp(r'\s').hasMatch(key))) {
       setState(() => _keyMessage = L.keyInvalid);
@@ -89,10 +76,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _keyMessage = null;
     });
     try {
-      await widget.store.saveAiKey(
-        widget.preferences.aiProvider,
-        remove ? null : key,
-      );
+      await widget.store.saveOpenAiKey(remove ? null : key);
       if (mounted) {
         _input.clear();
         setState(() {
@@ -117,8 +101,6 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final heading = Theme.of(context).textTheme.titleMedium;
     final preferences = widget.preferences;
-    final provider = preferences.aiProvider;
-    final keyControlsEnabled = !_changingKey && !_changingPreferences;
     return StudioList(
       title: L.settings(context),
       children: [
@@ -174,54 +156,30 @@ class _SettingsPageState extends State<SettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(L.ai(context), style: heading),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<AiProvider>(
-                key: ValueKey((provider, _changingPreferences)),
-                initialValue: provider,
-                isExpanded: true,
-                decoration: InputDecoration(labelText: L.aiProvider(context)),
-                items: [
-                  for (final option in AiProvider.values)
-                    DropdownMenuItem(value: option, child: Text(option.label)),
-                ],
-                onChanged: keyControlsEnabled
-                    ? (value) {
-                        if (value != null && value != provider) {
-                          unawaited(
-                            _setPreferences(
-                              preferences.copyWith(aiProvider: value),
-                            ),
-                          );
-                        }
-                      }
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              Text((_hasKey ? L.keyReady : L.keyHelp)(context, provider.label)),
+              const SizedBox(height: 6),
+              Text((_hasKey ? L.keyReady : L.keyHelp)(context)),
               const SizedBox(height: 12),
               TextField(
                 controller: _input,
-                enabled: keyControlsEnabled,
+                enabled: !_changingKey,
                 obscureText: true,
                 enableSuggestions: false,
                 autocorrect: false,
-                decoration: InputDecoration(
-                  labelText: L.apiKey(context, provider.label),
-                ),
+                decoration: InputDecoration(labelText: L.apiKey(context)),
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 children: [
                   FilledButton(
-                    onPressed: keyControlsEnabled ? _setKey : null,
+                    onPressed: _changingKey ? null : _setKey,
                     child: Text(L.saveKey(context)),
                   ),
                   if (_hasKey)
                     TextButton(
-                      onPressed: keyControlsEnabled
-                          ? () => _setKey(remove: true)
-                          : null,
+                      onPressed: _changingKey
+                          ? null
+                          : () => _setKey(remove: true),
                       child: Text(L.removeKey(context)),
                     ),
                 ],

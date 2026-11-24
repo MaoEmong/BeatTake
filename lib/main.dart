@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'ai_arranger.dart';
-import 'ai_provider.dart';
 import 'ai_studio_page.dart';
 import 'app_preferences.dart';
 import 'copy.dart';
@@ -23,11 +22,11 @@ class BeatTakeApp extends StatefulWidget {
   const BeatTakeApp({
     super.key,
     this.openRecordings = RecordingStore.open,
-    this.arrangerFor = AiArranger.new,
+    this.createArranger = AiArranger.new,
   });
 
   final Future<RecordingStore> Function() openRecordings;
-  final AiArranger Function(AiProvider) arrangerFor;
+  final AiArranger Function() createArranger;
 
   @override
   State<BeatTakeApp> createState() => _BeatTakeAppState();
@@ -66,7 +65,7 @@ class _BeatTakeAppState extends State<BeatTakeApp> {
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : _StudioShell(
               openRecordings: widget.openRecordings,
-              arrangerFor: widget.arrangerFor,
+              createArranger: widget.createArranger,
               preferences: preferences,
               preferenceStore: _store,
               onPreferencesChanged: (value) {
@@ -94,14 +93,14 @@ enum _Section {
 class _StudioShell extends StatefulWidget {
   const _StudioShell({
     required this.openRecordings,
-    required this.arrangerFor,
+    required this.createArranger,
     required this.preferences,
     required this.preferenceStore,
     required this.onPreferencesChanged,
   });
 
   final Future<RecordingStore> Function() openRecordings;
-  final AiArranger Function(AiProvider) arrangerFor;
+  final AiArranger Function() createArranger;
   final AppPreferences preferences;
   final PreferenceStore preferenceStore;
   final ValueChanged<AppPreferences> onPreferencesChanged;
@@ -199,10 +198,9 @@ class _StudioShellState extends State<_StudioShell> {
           _Section.sounds => SoundsPage(store: store, initialTab: _tab),
           _Section.songs => SongsPage(recordings: store),
           _Section.ai => AiStudioPage(
-            key: ValueKey(widget.preferences.aiProvider),
             store: store,
             preferences: widget.preferenceStore,
-            arranger: widget.arrangerFor(widget.preferences.aiProvider),
+            arranger: widget.createArranger(),
             openSettings: () => _select(_Section.settings),
             onSaved: () => _select(_Section.songs),
           ),

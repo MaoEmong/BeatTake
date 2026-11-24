@@ -60,7 +60,7 @@ class _AiStudioPageState extends State<AiStudioPage> {
       if (mounted) setState(() => _error = L.storageError);
     }
     try {
-      final key = await widget.preferences.readAiKey(widget.arranger.provider);
+      final key = await widget.preferences.readOpenAiKey();
       if (mounted) setState(() => _hasKey = key?.isNotEmpty == true);
     } catch (_) {
       if (mounted) setState(() => _error ??= L.keyLoadFailed);
@@ -82,7 +82,7 @@ class _AiStudioPageState extends State<AiStudioPage> {
       _error = null;
     });
     try {
-      final key = await widget.preferences.readAiKey(widget.arranger.provider);
+      final key = await widget.preferences.readOpenAiKey();
       if (!mounted) return;
       if (key == null || key.isEmpty) {
         setState(() {
@@ -151,7 +151,6 @@ class _AiStudioPageState extends State<AiStudioPage> {
   @override
   Widget build(BuildContext context) {
     final names = clipNames(context, _clips);
-    final provider = widget.arranger.provider.label;
     return StudioList(
       title: L.makeAiSong(context),
       children: [
@@ -164,14 +163,14 @@ class _AiStudioPageState extends State<AiStudioPage> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 6),
-              Text(L.aiHelp(context, provider)),
+              Text(L.aiHelp(context)),
             ],
           ),
         ),
         const SizedBox(height: 12),
         if (_loading || _busy) const LinearProgressIndicator(),
         if (!_loading && !_hasKey) ...[
-          Text(L.aiNoKey(context, provider)),
+          Text(L.aiNoKey(context)),
           const SizedBox(height: 6),
           OutlinedButton.icon(
             onPressed: widget.openSettings,
@@ -181,7 +180,7 @@ class _AiStudioPageState extends State<AiStudioPage> {
           const SizedBox(height: 12),
         ],
         if (_error case final message?) ...[
-          Semantics(liveRegion: true, child: Text(message(context, provider))),
+          Semantics(liveRegion: true, child: Text(message(context))),
           if (message == L.storageError)
             OutlinedButton(
               onPressed: _loading ? null : _load,
