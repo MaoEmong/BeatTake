@@ -24,6 +24,7 @@ class _SongsPageState extends State<SongsPage> {
   List<SavedSong> _songs = [];
   List<SavedRecording> _clips = [];
   bool _busy = true;
+  bool _hasUnreadableSongs = false;
   L? _error;
 
   @override
@@ -38,12 +39,16 @@ class _SongsPageState extends State<SongsPage> {
       _error = null;
     });
     try {
-      final songs = await _store.list();
+      var hasUnreadableSongs = false;
+      final songs = await _store.list(
+        onUnreadable: () => hasUnreadableSongs = true,
+      );
       final clips = await widget.recordings.listClips();
       if (mounted) {
         setState(() {
           _songs = songs;
           _clips = clips;
+          _hasUnreadableSongs = hasUnreadableSongs;
         });
       }
     } catch (_) {
@@ -136,7 +141,18 @@ class _SongsPageState extends State<SongsPage> {
                 child: Text(L.tryAgain(context)),
               ),
           ],
-          if (enabled && _error == null && _songs.isEmpty)
+          if (_hasUnreadableSongs)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(L.songPartialLoad(context)),
+              ),
+            ),
+          if (enabled &&
+              _error == null &&
+              !_hasUnreadableSongs &&
+              _songs.isEmpty)
             StudioPanel(child: Text(L.emptySongs(context))),
           for (final song in _songs) ...[
             StudioPanel(

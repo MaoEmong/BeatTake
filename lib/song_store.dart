@@ -23,32 +23,24 @@ class SongStore {
 
   static final _songFile = RegExp(r'^song_(\d+)\.json$');
   static final _songId = RegExp(r'^\d+$');
+  static const _maxDateMilliseconds = 8640000000000000;
   final Directory _directory;
 
-  Future<List<SavedSong>> list() async {
+  Future<List<SavedSong>> list({void Function()? onUnreadable}) async {
     await _directory.create(recursive: true);
     final songs = <SavedSong>[];
     await for (final entry in _directory.list(followLinks: false)) {
       if (entry is! File) continue;
       final match = _songFile.firstMatch(entry.uri.pathSegments.last);
       if (match == null) continue;
-      final body = jsonDecode(await entry.readAsString());
-      if (body case {
-        'version': 1,
-        'name': final String name,
-        'updatedAt': final int updatedAt,
-        'placements': final List<Object?> placements,
-      } when name.isNotEmpty && placements.length <= SoundPlacement.maxCount) {
-        songs.add(
-          SavedSong(
-            id: match.group(1)!,
-            name: name,
-            updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAt),
-            placements: placements.map(SoundPlacement.fromJson).toList(),
-          ),
-        );
-      } else {
-        throw const FormatException('Invalid saved song');
+      try {
+        songs.add(await _read(entry, match.group(1)!));
+      } catch (error) {
+        if (onUnreadable == null ||
+            (error is! FormatException && error is! FileSystemException)) {
+          rethrow;
+        }
+        onUnreadable();
       }
     }
     return songs..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -96,9 +88,33 @@ class SongStore {
   }
 
   Future<bool> usesClip(String id) async {
+    // A clip may still be referenced by an unreadable song.
     return (await list()).any(
       (song) => song.placements.any((placement) => placement.clipId == id),
     );
+  }
+
+  Future<SavedSong> _read(File file, String id) async {
+    final body = jsonDecode(await file.readAsString());
+    if (body
+        case {
+          'version': 1,
+          'name': final String name,
+          'updatedAt': final int updatedAt,
+          'placements': final List<Object?> placements,
+        }
+        when name.isNotEmpty &&
+            updatedAt >= -_maxDateMilliseconds &&
+            updatedAt <= _maxDateMilliseconds &&
+            placements.length <= SoundPlacement.maxCount) {
+      return SavedSong(
+        id: id,
+        name: name,
+        updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAt),
+        placements: placements.map(SoundPlacement.fromJson).toList(),
+      );
+    }
+    throw const FormatException('Invalid saved song');
   }
 
   File _file(String id) {

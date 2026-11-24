@@ -270,6 +270,12 @@ enum L {
     '曲を読み込めませんでした。',
     '无法加载歌曲。',
   ),
+  songPartialLoad(
+    'Some saved songs couldn’t be opened.',
+    '저장한 곡 중 일부를 열지 못했어요.',
+    '保存した曲の一部を開けませんでした。',
+    '部分已保存的歌曲无法打开。',
+  ),
   emptySongs(
     'Saved songs appear here.',
     '저장한 곡이 여기에 표시됩니다.',
