@@ -2,7 +2,7 @@
 
 [한국어 README](README.ko.md)
 
-Turn the sounds around you into music, wherever you are. Record a desk tap, a zipper, or a footstep, then trim and layer those sounds into a short track on your phone.
+BeatTake helps people new to music-making turn sounds they notice on the spot into short tracks. Record a desk tap, a zipper, or a footstep, then trim and layer those sounds in the browser or on Android.
 
 Built for Vibe Forge by **Emong**.
 
@@ -33,7 +33,17 @@ This feature needs an internet connection and an OpenAI API key with access to G
 
 BeatTake is built in Flutter. The app records and edits audio locally. Each saved song keeps a list of clips, tracks, and start times, so an arrangement remains editable. Playback mixes those clips on the device. AI suggestions are checked against the selected clips and the song length limit before opening the editor.
 
-The starting materials were a Flutter app scaffold and product planning notes. Emong chose the app direction and the Track Lens layout. OpenAI Codex helped implement and test the app. An independent Codex review reproduced a duplicate save from rapid taps, which was fixed and covered by a regression test. After testing several AI integrations, Emong kept OpenAI for the submission.
+## Development choices and AI
+
+Emong started with a Flutter scaffold and planning notes, defined the flow from recording to an editable song, and chose the Track Lens layout. Emong used OpenAI Codex to build that flow, then asked for a separate review of the real recording, editing, and saving steps.
+
+The review reproduced a duplicate song when **Save** was tapped twice quickly. The fix accepts one save while a write is in progress. An automated test now checks that two quick taps create one song and take the user back to the library.
+
+Emong kept OpenAI for AI Studio after confirming that a live arrangement could be edited, saved, and replayed. The prompt asks OpenAI to use the selected clips and return their track numbers and start times. BeatTake checks the suggested placements and opens them in the same editor used for manual arrangements. [Development and test notes](docs/development.md)
+
+## Next steps
+
+Add WAV export so users can share a finished track or bring it into another music app. Test recording, interruptions, and playback on a wider range of phones and mobile browsers.
 
 ## Build and verify
 
@@ -45,6 +55,6 @@ flutter build apk --release
 flutter build web --release
 ```
 
-The APK is written to `build/app/outputs/flutter-apk/app-release.apk`. The website is written to `build/web`. [Development and test notes](docs/development.md)
+The APK is written to `build/app/outputs/flutter-apk/app-release.apk`. The website is written to `build/web`. [Development and test notes](docs/development.md) · [Vibe Forge submission guide](docs/deployment.md)
 
 BeatTake uses Flutter and its Material icons, along with the audio and storage packages listed in [pubspec.yaml](pubspec.yaml). OpenAI powers the optional arrangement feature.

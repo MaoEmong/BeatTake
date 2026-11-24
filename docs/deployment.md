@@ -31,7 +31,7 @@
 | 공개 데모 링크 | [GitHub Pages 웹 데모](https://maoemong.github.io/BeatTake/) |
 | 저장소 링크 (선택) | [BeatTake 저장소](https://github.com/MaoEmong/BeatTake) |
 | 프로젝트 소개 및 AI 사용 내역 | 아래 영문 문구 |
-| 시연 영상 | 참가자 화면에 영상 파일을 올리거나 심사위원이 로그인 없이 열 수 있는 링크를 입력 |
+| 시연 영상 | 보완본 `BeatTake-VibeForge-Demo.mp4`(1분 54.5초, 약 3.2MB)를 올리거나 심사위원이 로그인 없이 열 수 있는 영상 링크를 입력 |
 
 현재 규정의 기본 영상 길이는 **2분 이내**이고 파일로 올릴 때는 **최대 250MB**입니다. 앱 화면과 음성 설명으로 녹음, 편집, 곡 배치와 재생을 보여 주고, 앱의 구성과 AI를 어디에 썼는지 짧게 설명합니다. 개인 API 키는 영상에 가립니다. [Vibe Forge 공식 규정 4·5·8항](https://vibe-forge.in/rules)
 
@@ -39,8 +39,20 @@
 
 ### 프로젝트 소개
 
-> BeatTake turns everyday sounds into music. Record a desk tap or a footstep, trim the sound, and layer it with other clips to build a track. Anyone can try the web demo without signing in. Android users can also install the app from GitHub Releases.
+> BeatTake helps people new to music-making turn sounds they notice on the spot into a track. Record a desk tap or a footstep, trim it, change its pitch, and layer it with other clips. Save the song and open it again to play or edit it. The browser demo opens without an account, and the Android app is available on GitHub Releases.
 
 ### 개발 도구와 AI 사용 내역
 
-> I started with a Flutter starter project and product planning notes. I chose the app direction and the Track Lens layout. I used OpenAI Codex to help implement and test the app, including the recording, editing, and saving flows. BeatTake’s optional AI Studio uses OpenAI to suggest an arrangement of selected clips that the user can play and edit.
+> I started with a Flutter scaffold and planning notes. I chose the Track Lens layout and asked OpenAI Codex to build the recording, editing, and song-making screens, then review the complete flow. That review reproduced duplicate songs when Save was tapped twice quickly. We blocked a second save while the first was in progress and added a test that confirms only one song is saved.
+>
+> I kept OpenAI for the submission after verifying that a live arrangement could be edited, saved, and replayed. In AI Studio, the prompt asks for track numbers and start times for the selected sounds. BeatTake checks those placements and opens them for editing.
+
+### 다음 개발 계획
+
+> I plan to add WAV export so people can share finished tracks or use them in another music app. I also plan to test microphone permission, recording interruptions, and playback across more phones and mobile browsers.
+
+### 제출 전 확인
+
+- 공개 데모에서 로그인 없이 홈 화면이 열리고 하단에 **Built for Vibe Forge by Emong**이 보이는지 확인합니다. 심사위원은 로그인이나 API 키 없이 녹음·편집·수동 곡 만들기를 체험할 수 있습니다. AI 편곡 결과는 시연 영상에서 볼 수 있습니다.
+- 공개 저장소에서 영문 README, 한국어 README, Android APK를 열 수 있는지 확인합니다.
+- 영상 파일을 올릴 경우 길이와 용량을 확인합니다. 영상 링크를 넣는 경우에는 로그인 없이 재생할 수 있는지 확인합니다.
