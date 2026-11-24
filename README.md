@@ -4,9 +4,13 @@ Turn the sounds around you into music, wherever you are. Record a desk tap, a zi
 
 Built for Vibe Forge by **Emong**.
 
+## Open the web demo
+
+[Try BeatTake in your browser](https://maoemong.github.io/BeatTake/). No sign-in is needed. Allow microphone access when you start recording. Your recordings and songs stay in the browser you use.
+
 ## Install the Android app
 
-Open the supplied `BeatTake-1.0.0-android.apk` on a device running **Android 7.0 or newer** and follow the Android installation prompt. Allow microphone access the first time you record.
+[Download BeatTake for Android](https://github.com/MaoEmong/BeatTake/releases/download/v1.0.0/BeatTake-1.0.0-android.apk). Open the APK on a device running **Android 7.0 or newer** and follow the installation prompt. Allow microphone access the first time you record.
 
 ## Try the main flow
 
@@ -15,13 +19,13 @@ Open the supplied `BeatTake-1.0.0-android.apk` on a device running **Android 7.0
 3. Choose **Make a song** on **Home**. Enter a title and use **Add sound** to place each clip on a track. Try placing them at different start times or overlapping them.
 4. Tap **Play** to hear the result, then **Save**. Open **Songs** to replay or edit the saved arrangement.
 
-Recording, editing, and playing saved songs work offline without an account or an API key.
+Recording, editing, and playing saved songs need no account or API key. The Android app works offline for these features.
 
 ## Try AI arrangement
 
-Enter your own OpenAI API key under **Settings**. In **AI Studio**, select two or more edited clips, optionally describe the mood, and tap **Make arrangement**. The suggested placements open in the track editor for playback, changes, and saving.
+Enter your own OpenAI API key under **Settings**. In **AI Studio**, select one or more edited clips, optionally describe the mood, and tap **Make arrangement**. The suggested placements open in the track editor for playback, changes, and saving.
 
-This feature needs an internet connection and an OpenAI API key with access to GPT-6 Luna. Recordings and songs are stored on the device. For an AI request, BeatTake sends the selected clip names and durations, the arrangement direction, and temporary labels for the clips.
+This feature needs an internet connection and an OpenAI API key with access to GPT-6 Luna. The web demo keeps that key in memory until you reload or close the page. On Android it is saved in the device’s secure storage. Requests go directly to OpenAI with the selected clip names and durations, the arrangement direction, and temporary labels for the clips. The audio stays in your library.
 
 ## How it works
 
@@ -36,8 +40,9 @@ flutter pub get
 flutter analyze
 flutter test
 flutter build apk --release
+flutter build web --release
 ```
 
-The APK is written to `build/app/outputs/flutter-apk/app-release.apk`. The main flow and a live OpenAI arrangement were verified on an Android 15 virtual device. [Development and test notes](docs/development.md)
+The APK is written to `build/app/outputs/flutter-apk/app-release.apk`. The website is written to `build/web`. [Development and test notes](docs/development.md)
 
 BeatTake uses Flutter and its Material icons, along with the audio and storage packages listed in [pubspec.yaml](pubspec.yaml). OpenAI powers the optional arrangement feature.

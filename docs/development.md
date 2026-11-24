@@ -36,7 +36,13 @@ $vibeFlutter = 'E:\portfolio\ieum\.build-tools\flutter\bin\flutter.bat'
 - 파일 위치는 `build/submission/BeatTake-1.0.0-android.apk`다. Android 7.0 이상에서 설치할 수 있고, 설치 파일에는 ARM 32비트·64비트와 x86 64비트 코드가 들어 있다.
 - 심사 기기에 직접 설치할 수 있도록 프로젝트의 기존 테스트 서명을 사용했다. 안드로이드 SDK 도구로 서명을 검증하고, Android 15 가상 휴대폰에 새로 설치해 홈 화면의 **Built for Vibe Forge by Emong** 문구를 확인했다. 코드 검사와 자동 테스트 16개도 통과했다.
 - 새로 설치한 앱에서 마이크 권한을 허용하고, 녹음을 마친 뒤 편집 화면으로 이동해 소리를 보관함에 저장하는 흐름을 확인했다.
-- 파일의 SHA-256 값은 `aa37d1558f1b5237c298ec3539ddf56e268f83f94e78b06fe168442493100f87`다. 원본 빌드와 이름을 바꾼 심사용 파일의 값이 일치한다.
+- 웹 지원을 반영해 다시 빌드했고, 기존 설치에 업데이트로 올릴 수 있도록 같은 테스트 서명을 사용했다. 최종 파일의 SHA-256 값은 `854baedcf5afb8e026a4a48d58753e1873b670b6f1a65676b331f8f9e3a8e42f`다. [GitHub Releases](https://github.com/MaoEmong/BeatTake/releases/tag/v1.0.0)
+
+## 바이브 포지 웹 데모
+
+- GitHub Pages에 Flutter 웹 빌드를 게시한다. GitHub는 `main`에서 앱 코드나 빌드 설정이 바뀌면 검사와 웹 빌드를 실행한 뒤 게시한다. [웹 데모](https://maoemong.github.io/BeatTake/)
+- 앱 첫 화면에서 마이크 사용과 녹음부터 곡 만들기까지 안내한다. 녹음과 곡은 해당 브라우저에 저장된다. 곡이 참조하는 소리를 다른 탭에서 지우지 못하도록 확인과 저장 순서를 맞춘다.
+- 웹의 OpenAI API 키는 현재 페이지 메모리에만 둔다. 새로고침 후 다시 입력해야 하며, 개인 키가 들어간 요청은 OpenAI로 직접 보낸다.
 
 ## 코드와 파일
 

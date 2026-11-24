@@ -1,0 +1,57 @@
+name: Publish BeatTake web demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pages.yml'
+      - 'analysis_options.yaml'
+      - 'lib/**'
+      - 'test/**'
+      - 'web/**'
+      - 'pubspec.*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/configure-pages@v5
+        id: pages
+      - name: Install Flutter 3.44.7
+        run: git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+      - name: Check and build
+        env:
+          PAGES_BASE: ${{ steps.pages.outputs.base_path }}
+        run: |
+          export PATH="$RUNNER_TEMP/flutter/bin:$PATH"
+          flutter pub get --enforce-lockfile
+          flutter analyze --no-pub
+          flutter test --no-pub
+          flutter build web --release --no-pub --no-web-resources-cdn --base-href="${PAGES_BASE%/}/"
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/web
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

@@ -30,15 +30,9 @@
 
 개발하면서 참가 기간 전에 준비한 코드나 문서와 기간 중 새로 작업한 내용을 기록한다. 나중에 설명할 수 있도록 AI에 요청한 내용, 결과를 고친 과정, 직접 판단한 부분도 남긴다. [대회 공식 규정 4·5항](https://vibe-forge.in/rules)
 
-## 모바일 앱 제출 방식
+## 제출 링크
 
-- 공식 규정 8항은 로그인 없이 열리는 **공개 데모 링크**를 요구한다. **소스 저장소 링크**는 선택 입력이다. GitHub Releases의 APK 다운로드 주소가 공개 데모로 인정되는지와 APK를 제출 화면에 직접 첨부할 수 있는지는 공식 규정, 자주 묻는 질문, 공지에서 확인되지 않았다. [대회 공식 규정](https://vibe-forge.in/rules) · [자주 묻는 질문](https://vibe-forge.in/faq) · [공지](https://vibe-forge.in/announcements)
-- 배포용 파일은 `build/submission/BeatTake-1.0.0-android.apk`에 준비한다. 주최 측이 APK 주소를 공개 데모로 허용하면 공개 GitHub Release에 파일을 첨부하고 설치 파일의 다운로드 주소를 데모 칸에 사용한다. 저장소 주소는 소스 저장소 칸에 넣을 수 있다. [GitHub Releases 안내](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
+- 공식 규정 8항의 **공개 데모 링크**에는 로그인 없이 바로 체험할 수 있는 [BeatTake 웹 앱](https://maoemong.github.io/BeatTake/) 주소를 사용한다. [대회 공식 규정](https://vibe-forge.in/rules)
+- **소스 저장소 링크**에는 [BeatTake 저장소](https://github.com/MaoEmong/BeatTake)를 사용한다. 같은 저장소의 [Releases](https://github.com/MaoEmong/BeatTake/releases/tag/v1.0.0)에서 Android APK를 받을 수 있다. [GitHub Releases 안내](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
 - 앱 홈 화면 하단과 [제출용 README](../README.md)에 제작자 닉네임 **Emong**과 대회명을 표시한다. 적용 마감은 참가자 화면에서 확인한다. [대회 공식 규정 4·8항](https://vibe-forge.in/rules) · [공식 일정](https://vibe-forge.in/timeline)
 - 시연 영상은 일반적으로 2분 이내이며 파일 업로드는 최대 250MB다. `Creative Tools and Design`은 기존 문서에 적힌 후보 분야다. [자주 묻는 질문](https://vibe-forge.in/faq)
-
-### 주최 측에 확인할 문구
-
-> Can we use an Android APK download from a public GitHub Release as the required public demo link for Vibe Forge? If a download link alone does not qualify, what type of public demo link is accepted for a native Android app?
-
-공식 문의 이메일은 [Vibe Forge 자주 묻는 질문](https://vibe-forge.in/faq)에 안내되어 있다.
