@@ -28,6 +28,8 @@ class _RecorderPageState extends State<RecorderPage> {
   final _recorder = AudioRecorder();
   final _clock = Stopwatch();
   late final AppLifecycleListener _lifecycle;
+  late final StreamSubscription<RecordState> _captureStates;
+  late final StreamSubscription<RecordStop> _captureStops;
   StreamSubscription<Amplitude>? _meter;
   Timer? _ticker;
   File? _draft;
@@ -35,6 +37,7 @@ class _RecorderPageState extends State<RecorderPage> {
   bool _busy = false;
   bool _startingCapture = false;
   bool _leftDuringStart = false;
+  bool _interruptedDuringStart = false;
   bool _hasRecording = false;
   L? _status;
 
@@ -48,6 +51,21 @@ class _RecorderPageState extends State<RecorderPage> {
         if (_draft != null && !_busy) unawaited(_finish());
       },
     );
+    _captureStates = _recorder.onStateChanged().listen((state) {
+      if (state == RecordState.pause) _captureInterrupted();
+    }, onError: (Object _) {});
+    _captureStops = _recorder.onStopped().listen((stop) {
+      if (stop.reason != RecordStopReason.stop) _captureInterrupted();
+    });
+  }
+
+  void _captureInterrupted() {
+    if (!mounted) return;
+    if (_startingCapture) {
+      _interruptedDuringStart = true;
+    } else if (_draft != null && !_busy) {
+      unawaited(_finish(interrupted: true));
+    }
   }
 
   Future<void> _start() async {
@@ -64,6 +82,7 @@ class _RecorderPageState extends State<RecorderPage> {
       if (!mounted) return;
       _startingCapture = true;
       _leftDuringStart = false;
+      _interruptedDuringStart = false;
       final file = widget.store.newDraft();
       await _recorder.start(
         const RecordConfig(
@@ -112,8 +131,9 @@ class _RecorderPageState extends State<RecorderPage> {
         setState(() => _busy = false);
         if (_draft != null &&
             (_leftDuringStart ||
+                _interruptedDuringStart ||
                 _lifecycleState != AppLifecycleState.resumed)) {
-          unawaited(_finish());
+          unawaited(_finish(interrupted: _interruptedDuringStart));
         }
       }
     }
@@ -122,7 +142,11 @@ class _RecorderPageState extends State<RecorderPage> {
   AppLifecycleState? get _lifecycleState =>
       WidgetsBinding.instance.lifecycleState;
 
-  Future<void> _finish({bool fromButton = false, bool leave = false}) async {
+  Future<void> _finish({
+    bool fromButton = false,
+    bool leave = false,
+    bool interrupted = false,
+  }) async {
     final draft = _draft;
     if (draft == null || _busy) return;
     _ticker?.cancel();
@@ -140,7 +164,7 @@ class _RecorderPageState extends State<RecorderPage> {
       if (mounted) {
         setState(() {
           _hasRecording = true;
-          _status = L.recordSaved;
+          _status = interrupted ? L.recordInterrupted : L.recordSaved;
         });
       }
     } catch (error) {
@@ -174,6 +198,8 @@ class _RecorderPageState extends State<RecorderPage> {
   void dispose() {
     _lifecycle.dispose();
     _ticker?.cancel();
+    unawaited(_captureStates.cancel());
+    unawaited(_captureStops.cancel());
     unawaited(_meter?.cancel());
     unawaited(_recorder.dispose());
     super.dispose();

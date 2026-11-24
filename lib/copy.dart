@@ -148,6 +148,12 @@ enum L {
     '无法保存录音。请重新录制。',
   ),
   recordSaved('Recording saved.', '녹음을 저장했어요.', '録音を保存しました。', '录音已保存。'),
+  recordInterrupted(
+    'Recording was interrupted. The sound so far was saved.',
+    '녹음이 중단되어 지금까지 녹음한 소리를 저장했어요.',
+    '録音が中断されたため、途中までの音を保存しました。',
+    '录音中断，已保存此前录下的声音。',
+  ),
   viewSounds('Open Sounds', '소리 보관함 열기', 'サウンドを開く', '打开声音库'),
   originals('Recordings', '원본 녹음', '元の録音', '原始录音'),
   clips('Edited clips', '다듬은 소리', '編集済みクリップ', '已编辑片段'),
