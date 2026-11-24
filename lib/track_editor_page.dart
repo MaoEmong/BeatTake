@@ -66,6 +66,7 @@ class _TrackEditorPageState extends State<TrackEditorPage> {
   }
 
   Future<void> _save() async {
+    if (_saving || _player.busy || _player.playing != null) return;
     final name = _name.text.trim();
     if (name.isEmpty) {
       setState(() => _error = L.songNameRequired);

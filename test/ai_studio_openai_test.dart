@@ -8,9 +8,10 @@ import 'package:everyday_beats/recording_store.dart';
 import 'package:everyday_beats/track_editor_page.dart';
 import 'package:everyday_beats/wav_audio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/mock_audio_channels.dart';
 
 void main() {
   testWidgets('AI Studio uses an OpenAI key and opens the arrangement', (
@@ -25,7 +26,7 @@ void main() {
       'gemini_api_key': 'legacy-gemini-key',
       'claude_api_key': 'legacy-claude-key',
     });
-    _mockAudioChannels(tester);
+    mockAudioChannels(tester);
 
     final directory = Directory.systemTemp.createTempSync('beats_ai_test_');
     addTearDown(() => directory.deleteSync(recursive: true));
@@ -145,29 +146,6 @@ Future<void> _waitFor(WidgetTester tester, Finder finder) async {
   }
   expect(finder, findsOneWidget);
   await tester.pump(const Duration(milliseconds: 350));
-}
-
-void _mockAudioChannels(WidgetTester tester) {
-  final messenger = tester.binding.defaultBinaryMessenger;
-  for (final name in [
-    'xyz.luan/audioplayers.global',
-    'xyz.luan/audioplayers.global/events',
-  ]) {
-    messenger.setMockMethodCallHandler(MethodChannel(name), (_) async => null);
-  }
-  messenger.setMockMethodCallHandler(
-    const MethodChannel('xyz.luan/audioplayers'),
-    (call) async {
-      if (call.method == 'create') {
-        final player = call.arguments['playerId'];
-        messenger.setMockMethodCallHandler(
-          MethodChannel('xyz.luan/audioplayers/events/$player'),
-          (_) async => null,
-        );
-      }
-      return null;
-    },
-  );
 }
 
 class _LocalHttp extends HttpOverrides {}
