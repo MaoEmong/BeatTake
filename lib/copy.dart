@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+const appName = 'BeatTake';
+
 enum AppLanguage {
   en('English'),
   ko('한국어'),
@@ -109,10 +111,10 @@ enum L {
     '获取可编辑的编排方案。',
   ),
   forgeCredit(
-    'Built for Vibe Forge by Everyday Beats',
-    'Everyday Beats가 Vibe Forge를 위해 제작',
-    'Everyday Beats が Vibe Forge 向けに制作',
-    'Everyday Beats 为 Vibe Forge 制作',
+    'Built for Vibe Forge by $appName',
+    'Vibe Forge를 위해 제작 · $appName',
+    '$appName が Vibe Forge 向けに制作',
+    '$appName 为 Vibe Forge 制作',
   ),
   storageError(
     'Couldn’t open your sound library.',

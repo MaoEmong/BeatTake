@@ -1,6 +1,6 @@
-# everyday_beats
+# BeatTake
 
-A new Flutter project.
+A Flutter app for making music from sounds you record.
 
 ## Getting Started
 

@@ -15,21 +15,18 @@ import 'sounds_page.dart';
 import 'studio_widgets.dart';
 import 'track_editor_page.dart';
 
-void main() => runApp(const EverydayBeatsApp());
+void main() => runApp(const BeatTakeApp());
 
-class EverydayBeatsApp extends StatefulWidget {
-  const EverydayBeatsApp({
-    super.key,
-    this.openRecordings = RecordingStore.open,
-  });
+class BeatTakeApp extends StatefulWidget {
+  const BeatTakeApp({super.key, this.openRecordings = RecordingStore.open});
 
   final Future<RecordingStore> Function() openRecordings;
 
   @override
-  State<EverydayBeatsApp> createState() => _EverydayBeatsAppState();
+  State<BeatTakeApp> createState() => _BeatTakeAppState();
 }
 
-class _EverydayBeatsAppState extends State<EverydayBeatsApp> {
+class _BeatTakeAppState extends State<BeatTakeApp> {
   final _store = const PreferenceStore();
   AppPreferences? _preferences;
 
@@ -52,7 +49,7 @@ class _EverydayBeatsAppState extends State<EverydayBeatsApp> {
   Widget build(BuildContext context) {
     final preferences = _preferences;
     return MaterialApp(
-      title: 'Everyday Beats',
+      title: appName,
       debugShowCheckedModeBanner: false,
       theme: studioTheme,
       locale: (preferences?.language ?? AppLanguage.en).locale,
@@ -224,7 +221,7 @@ class _StudioShellState extends State<_StudioShell> {
                       child: Padding(
                         padding: EdgeInsets.only(bottom: 12),
                         child: Text(
-                          'e.',
+                          'b.',
                           style: TextStyle(
                             color: studioAccent,
                             fontSize: 32,
@@ -367,7 +364,7 @@ class _Home extends StatelessWidget {
       children: [
         const SizedBox(height: 8),
         const Text(
-          'Everyday\nBeats.',
+          appName,
           style: TextStyle(
             fontSize: 40,
             height: .97,

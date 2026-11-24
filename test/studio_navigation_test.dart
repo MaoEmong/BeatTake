@@ -22,10 +22,11 @@ void main() {
       );
       addTearDown(() => directory.deleteSync(recursive: true));
       await tester.pumpWidget(
-        EverydayBeatsApp(openRecordings: () async => RecordingStore(directory)),
+        BeatTakeApp(openRecordings: () async => RecordingStore(directory)),
       );
       await tester.pumpAndSettle();
 
+      expect(find.text('BeatTake'), findsOneWidget);
       expect(find.text('Record a sound'), findsOneWidget);
       await tester.tap(find.text('Settings'));
       await tester.pumpAndSettle();
