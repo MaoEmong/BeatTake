@@ -1,17 +1,43 @@
 # BeatTake
 
-A Flutter app for making music from sounds you record.
+Turn the sounds around you into music, wherever you are. Record a desk tap, a zipper, or a footstep, then trim and layer those sounds into a short track on your phone.
 
-## Getting Started
+Built for Vibe Forge by **Emong**.
 
-This project is a starting point for a Flutter application.
+## Install the Android app
 
-A few resources to get you started if this is your first Flutter project:
+Open the supplied `BeatTake-1.0.0-android.apk` on a device running **Android 7.0 or newer** and follow the Android installation prompt. Allow microphone access the first time you record.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Try the main flow
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. On **Home**, choose **Record a sound**, capture a short sound, and tap **Stop and save**.
+2. Trim the selection, adjust its pitch, and tap **Preview**. Use **Save clip** to keep your edit. Repeat to capture a second sound.
+3. Choose **Make a song** on **Home**. Enter a title and use **Add sound** to place each clip on a track. Try placing them at different start times or overlapping them.
+4. Tap **Play** to hear the result, then **Save**. Open **Songs** to replay or edit the saved arrangement.
+
+Recording, editing, and playing saved songs work offline without an account or an API key.
+
+## Try AI arrangement
+
+Enter your own OpenAI API key under **Settings**. In **AI Studio**, select two or more edited clips, optionally describe the mood, and tap **Make arrangement**. The suggested placements open in the track editor for playback, changes, and saving.
+
+This feature needs an internet connection and an OpenAI API key with access to GPT-6 Luna. Recordings and songs are stored on the device. For an AI request, BeatTake sends the selected clip names and durations, the arrangement direction, and temporary labels for the clips.
+
+## How it works
+
+BeatTake is built in Flutter. The app records and edits audio locally. Each saved song keeps a list of clips, tracks, and start times, so an arrangement remains editable. Playback mixes those clips on the device. AI suggestions are checked against the selected clips and the song length limit before opening the editor.
+
+The starting materials were a Flutter app scaffold and product planning notes. Emong chose the app direction and the Track Lens layout. OpenAI Codex helped implement and test the app. An independent Codex review reproduced a duplicate save from rapid taps, which was fixed and covered by a regression test. After testing several AI integrations, Emong kept OpenAI for the submission.
+
+## Build and verify
+
+```sh
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --release
+```
+
+The APK is written to `build/app/outputs/flutter-apk/app-release.apk`. The main flow and a live OpenAI arrangement were verified on an Android 15 virtual device. [Development and test notes](docs/development.md)
+
+BeatTake uses Flutter and its Material icons, along with the audio and storage packages listed in [pubspec.yaml](pubspec.yaml). OpenAI powers the optional arrangement feature.

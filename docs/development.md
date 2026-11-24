@@ -31,6 +31,13 @@ $vibeFlutter = 'E:\portfolio\ieum\.build-tools\flutter\bin\flutter.bat'
 - 코드와 패키지가 각각 E 드라이브와 C 드라이브에 있어 발생했던 Android 빌드 오류를 피하도록 `android/gradle.properties`에 `kotlin.incremental=false`를 설정했다.
 - iOS는 마이크 사용 권한 문구가 들어가 있다. 빌드와 기기 확인에는 macOS의 Xcode 환경이 필요하다.
 
+## 바이브 포지 심사용 APK
+
+- 파일 위치는 `build/submission/BeatTake-1.0.0-android.apk`다. Android 7.0 이상에서 설치할 수 있고, 설치 파일에는 ARM 32비트·64비트와 x86 64비트 코드가 들어 있다.
+- 심사 기기에 직접 설치할 수 있도록 프로젝트의 기존 테스트 서명을 사용했다. 안드로이드 SDK 도구로 서명을 검증하고, Android 15 가상 휴대폰에 새로 설치해 홈 화면의 **Built for Vibe Forge by Emong** 문구를 확인했다. 코드 검사와 자동 테스트 16개도 통과했다.
+- 새로 설치한 앱에서 마이크 권한을 허용하고, 녹음을 마친 뒤 편집 화면으로 이동해 소리를 보관함에 저장하는 흐름을 확인했다.
+- 파일의 SHA-256 값은 `aa37d1558f1b5237c298ec3539ddf56e268f83f94e78b06fe168442493100f87`다. 원본 빌드와 이름을 바꾼 심사용 파일의 값이 일치한다.
+
 ## 코드와 파일
 
 | 위치 | 하는 일 |
