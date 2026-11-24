@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_preferences.dart';
@@ -81,7 +82,11 @@ class _SettingsPageState extends State<SettingsPage> {
         _input.clear();
         setState(() {
           _hasKey = !remove;
-          _keyMessage = remove ? L.keyRemoved : L.keySaved;
+          _keyMessage = remove
+              ? L.keyRemoved
+              : kIsWeb
+              ? null
+              : L.keySaved;
         });
       }
     } catch (_) {
@@ -157,7 +162,10 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               Text(L.ai(context), style: heading),
               const SizedBox(height: 6),
-              Text((_hasKey ? L.keyReady : L.keyHelp)(context)),
+              if (_hasKey)
+                Text((kIsWeb ? L.browserKeyReady : L.keyReady)(context)),
+              if (kIsWeb || !_hasKey)
+                Text((kIsWeb ? L.browserKeyHelp : L.keyHelp)(context)),
               const SizedBox(height: 12),
               TextField(
                 controller: _input,
@@ -173,7 +181,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   FilledButton(
                     onPressed: _changingKey ? null : _setKey,
-                    child: Text(L.saveKey(context)),
+                    child: Text((kIsWeb ? L.useKey : L.saveKey)(context)),
                   ),
                   if (_hasKey)
                     TextButton(

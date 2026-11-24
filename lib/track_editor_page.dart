@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'clip_catalog.dart';
@@ -34,7 +33,7 @@ class _TrackEditorPageState extends State<TrackEditorPage> {
   final _player = StudioPlayer();
   late final List<SoundPlacement> _placements;
   late final TextEditingController _name;
-  late final Map<String, String> _paths;
+  late final Map<String, String> _keys;
   Map<String, ClipDetails>? _details;
   int _track = 0;
   int? _focus;
@@ -47,13 +46,13 @@ class _TrackEditorPageState extends State<TrackEditorPage> {
     _placements = [...(widget.song?.placements ?? widget.arrangement)];
     if (_placements.isNotEmpty) _track = _placements.first.track;
     _name = TextEditingController(text: widget.song?.name ?? '');
-    _paths = {for (final clip in widget.clips) clip.id: clip.file.path};
+    _keys = {for (final clip in widget.clips) clip.id: clip.key};
     unawaited(_loadDetails());
   }
 
   Future<void> _loadDetails() async {
     try {
-      final details = await compute(inspectClips, _paths);
+      final details = await inspectClips(_keys, widget.store.files);
       if (mounted) setState(() => _details = details);
     } catch (_) {
       if (mounted) {
@@ -93,7 +92,12 @@ class _TrackEditorPageState extends State<TrackEditorPage> {
   Future<void> _play() async {
     setState(() => _error = null);
     try {
-      await _player.toggleSong('editor', List.of(_placements), _paths);
+      await _player.toggleSong(
+        'editor',
+        List.of(_placements),
+        _keys,
+        widget.store.files,
+      );
     } catch (_) {
       if (mounted) setState(() => _error = L.songPlayFailed);
     }

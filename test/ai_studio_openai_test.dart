@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:everyday_beats/library_files_native.dart';
 import 'package:everyday_beats/ai_arranger.dart';
 import 'package:everyday_beats/main.dart';
 import 'package:everyday_beats/recording_store.dart';
@@ -57,7 +58,8 @@ void main() {
     await HttpOverrides.runWithHttpOverrides(() async {
       await tester.pumpWidget(
         BeatTakeApp(
-          openRecordings: () async => RecordingStore(directory),
+          openRecordings: () async =>
+              RecordingStore(LocalLibraryFiles(directory)),
           createArranger: () => AiArranger(
             endpoint: Uri.http('127.0.0.1:${server.port}', '/v1/responses'),
           ),

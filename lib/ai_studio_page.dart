@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'ai_arranger.dart';
@@ -73,9 +72,9 @@ class _AiStudioPageState extends State<AiStudioPage> {
     if (_busy || _selected.isEmpty || !_hasKey) return;
     final names = clipNames(context, _clips);
     final request = _direction.text.trim();
-    final paths = {
+    final keys = {
       for (final clip in _clips)
-        if (_selected.contains(clip.id)) clip.id: clip.file.path,
+        if (_selected.contains(clip.id)) clip.id: clip.key,
     };
     setState(() {
       _busy = true;
@@ -91,9 +90,9 @@ class _AiStudioPageState extends State<AiStudioPage> {
         });
         return;
       }
-      final details = await compute(inspectClips, paths);
+      final details = await inspectClips(keys, widget.store.files);
       if (!mounted) return;
-      if (details.length != paths.length) {
+      if (details.length != keys.length) {
         setState(() => _error = L.soundOpenFailed);
         return;
       }
@@ -115,7 +114,7 @@ class _AiStudioPageState extends State<AiStudioPage> {
         MaterialPageRoute(
           builder: (_) => TrackEditorPage(
             clips: _clips,
-            store: SongStore(widget.store.directory),
+            store: SongStore(widget.store.files),
             arrangement: placements,
           ),
         ),

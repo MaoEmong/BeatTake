@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:everyday_beats/library_files_native.dart';
 import 'package:everyday_beats/recording_store.dart';
 import 'package:everyday_beats/song.dart';
 import 'package:everyday_beats/song_store.dart';
@@ -21,7 +22,7 @@ void main() {
     addTearDown(() => directory.deleteSync(recursive: true));
     final file = File.fromUri(directory.uri.resolve('clip_123.wav'));
     WavFile.write(file.path, 44100, Int16List(44100));
-    final store = _SlowSongStore(directory);
+    final store = _SlowSongStore(LocalLibraryFiles(directory));
 
     await tester.pumpWidget(
       MaterialApp(
@@ -32,7 +33,10 @@ void main() {
                 MaterialPageRoute(
                   builder: (_) => TrackEditorPage(
                     clips: [
-                      SavedRecording(file: file, recordedAt: DateTime.now()),
+                      SavedRecording(
+                        key: 'clip_123.wav',
+                        recordedAt: DateTime.now(),
+                      ),
                     ],
                     store: store,
                     arrangement: [
@@ -69,7 +73,7 @@ void main() {
 }
 
 class _SlowSongStore extends SongStore {
-  _SlowSongStore(super.recordings);
+  _SlowSongStore(super.files);
 
   final finishSave = Completer<void>();
   int saveCalls = 0;

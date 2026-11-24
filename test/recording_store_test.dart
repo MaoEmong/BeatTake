@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:everyday_beats/library_files_native.dart';
 import 'package:everyday_beats/recording_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -11,7 +12,7 @@ void main() {
         'everyday_beats_',
       );
       addTearDown(() => directory.delete(recursive: true));
-      final store = RecordingStore(directory);
+      final store = RecordingStore(LocalLibraryFiles(directory));
       final draft = store.newDraft();
       final audio = [
         // A WAV header followed by one 16-bit PCM sample.
@@ -20,25 +21,26 @@ void main() {
         68, 172, 0, 0, 136, 88, 1, 0, 2, 0, 16, 0,
         100, 97, 116, 97, 2, 0, 0, 0, 1, 0,
       ];
-      await draft.writeAsBytes(audio);
+      await File(draft.path).writeAsBytes(audio);
 
       expect(await store.list(), isEmpty);
       final saved = await store.save(draft);
-      expect(await draft.exists(), isFalse);
+      expect(await File(draft.path).exists(), isFalse);
 
-      final reopened = RecordingStore(directory);
+      final reopened = RecordingStore(LocalLibraryFiles(directory));
       final loaded = (await reopened.list()).single;
-      expect(loaded.file.path, saved.file.path);
+      expect(loaded.key, saved.key);
       expect(loaded.recordedAt, saved.recordedAt);
-      expect(await loaded.file.readAsBytes(), audio);
+      expect(await reopened.files.read(loaded.key), audio);
     },
   );
 
   test('an empty recording is not published', () async {
     final directory = await Directory.systemTemp.createTemp('everyday_beats_');
     addTearDown(() => directory.delete(recursive: true));
-    final store = RecordingStore(directory);
-    final draft = await store.newDraft().writeAsBytes(List.filled(44, 0));
+    final store = RecordingStore(LocalLibraryFiles(directory));
+    final draft = store.newDraft();
+    await File(draft.path).writeAsBytes(List.filled(44, 0));
 
     await expectLater(store.save(draft), throwsA(isA<FileSystemException>()));
     expect(await store.list(), isEmpty);

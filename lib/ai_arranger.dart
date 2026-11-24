@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+
+import 'package:http/http.dart' as http;
 
 import 'song.dart';
 
@@ -74,8 +75,7 @@ class AiArranger {
       schema,
     );
 
-    final client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 10);
+    final client = http.Client();
     try {
       final result = await _request(
         client,
@@ -108,10 +108,10 @@ class AiArranger {
       throw const ArrangementException(ArrangementFailure.invalidResult);
     } on TimeoutException {
       throw const ArrangementException(ArrangementFailure.timeout);
-    } on IOException {
+    } on http.ClientException {
       throw const ArrangementException(ArrangementFailure.connection);
     } finally {
-      client.close(force: true);
+      client.close();
     }
   }
 
@@ -157,19 +157,19 @@ class AiArranger {
   };
 
   Future<String> _request(
-    HttpClient client,
+    http.Client client,
     String key,
     Map<String, Object> payload,
   ) async {
-    final request = await client.postUrl(_endpoint);
-    request.followRedirects = false;
-    request.headers.contentType = ContentType.json;
-    request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $key');
-    request.add(utf8.encode(jsonEncode(payload)));
-    final response = await request.close();
+    final request = http.Request('POST', _endpoint)
+      ..followRedirects = false
+      ..headers['Content-Type'] = 'application/json'
+      ..headers['Authorization'] = 'Bearer $key'
+      ..bodyBytes = utf8.encode(jsonEncode(payload));
+    final response = await client.send(request);
     switch (response.statusCode) {
       case 200:
-        return utf8.decoder.bind(response).join();
+        return utf8.decoder.bind(response.stream).join();
       case 401 || 403:
         throw const ArrangementException(ArrangementFailure.access);
       case 400:

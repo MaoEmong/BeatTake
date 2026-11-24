@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'copy.dart';
+import 'playback_source.dart';
 import 'recording_store.dart';
 import 'studio_widgets.dart';
 import 'wav_audio.dart';
@@ -31,7 +31,7 @@ class _ClipEditorPageState extends State<ClipEditorPage> {
   late final StreamSubscription<void> _complete;
   WavFile? _audio;
   List<double> _peaks = [];
-  Directory? _scratch;
+  final _source = PlaybackSource();
   RangeValues _range = const RangeValues(0, 0);
   bool _busy = false;
   bool _playing = false;
@@ -49,9 +49,9 @@ class _ClipEditorPageState extends State<ClipEditorPage> {
   }
 
   Future<void> _load() async {
-    final path = widget.recording.file.path;
     try {
-      final preview = await compute(_readPreview, path);
+      final input = await widget.store.files.audio(widget.recording.key);
+      final preview = await compute(_readPreview, input);
       if (!mounted) return;
       setState(() {
         _audio = preview.audio;
@@ -94,13 +94,7 @@ class _ClipEditorPageState extends State<ClipEditorPage> {
     try {
       await _player.stop();
       if (!save && wasPlaying) return;
-      final directory = _scratch ??= await Directory.systemTemp.createTemp(
-        'beats_clip_',
-      );
-      final output = File.fromUri(directory.uri.resolve('selection.wav'));
-      final outputPath = output.path;
-      await compute(_renderSelection, (
-        path: outputPath,
+      final output = await compute(_renderSelection, (
         audio: audio,
         start: start,
         end: end,
@@ -112,7 +106,7 @@ class _ClipEditorPageState extends State<ClipEditorPage> {
         if (mounted) Navigator.pop(context, true);
       } else {
         setState(() => _playing = true);
-        await _player.play(DeviceFileSource(outputPath, mimeType: 'audio/wav'));
+        await _player.play(await _source.prepare(AudioInput.memory(output)));
       }
     } on FormatException {
       if (mounted) {
@@ -133,9 +127,8 @@ class _ClipEditorPageState extends State<ClipEditorPage> {
   Future<void> _disposePreview() async {
     try {
       await _player.dispose();
-      await _scratch?.delete(recursive: true);
-    } on FileSystemException {
-      // A preview can be discarded by the operating system at any time.
+    } finally {
+      await _source.dispose();
     }
   }
 
@@ -249,17 +242,16 @@ class _ClipEditorPageState extends State<ClipEditorPage> {
   }
 }
 
-({WavFile audio, List<double> peaks}) _readPreview(String path) {
-  final audio = WavFile.open(path);
+({WavFile audio, List<double> peaks}) _readPreview(AudioInput input) {
+  final audio = WavFile.read(input);
   return (audio: audio, peaks: audio.peaks());
 }
 
-void _renderSelection(
-  ({String path, WavFile audio, int start, int end, int semitones}) selection,
+Uint8List _renderSelection(
+  ({WavFile audio, int start, int end, int semitones}) selection,
 ) {
   final audio = selection.audio;
-  WavFile.write(
-    selection.path,
+  return WavFile.encode(
     audio.sampleRate,
     audio.edit(selection.start, selection.end, selection.semitones),
   );

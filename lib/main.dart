@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -149,7 +150,7 @@ class _StudioShellState extends State<_StudioShell> {
         context,
         MaterialPageRoute(
           builder: (_) =>
-              TrackEditorPage(clips: clips, store: SongStore(store.directory)),
+              TrackEditorPage(clips: clips, store: SongStore(store.files)),
         ),
       );
       if (mounted && saved == true) _select(_Section.songs);
@@ -384,6 +385,21 @@ class _Home extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(L.homeIntro(context), style: type.bodyMedium),
+        if (kIsWeb) ...[
+          const SizedBox(height: 16),
+          StudioPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(L.webGuideTitle(context), style: type.titleMedium),
+                const SizedBox(height: 6),
+                Text(L.webGuide(context)),
+                const SizedBox(height: 6),
+                Text(L.webGuideAi(context)),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 22),
         Semantics(
           button: true,

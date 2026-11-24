@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:everyday_beats/library_files_native.dart';
 import 'package:everyday_beats/app_preferences.dart';
 import 'package:everyday_beats/copy.dart';
 import 'package:everyday_beats/main.dart';
@@ -22,7 +23,10 @@ void main() {
       );
       addTearDown(() => directory.deleteSync(recursive: true));
       await tester.pumpWidget(
-        BeatTakeApp(openRecordings: () async => RecordingStore(directory)),
+        BeatTakeApp(
+          openRecordings: () async =>
+              RecordingStore(LocalLibraryFiles(directory)),
+        ),
       );
       await tester.pumpAndSettle();
 

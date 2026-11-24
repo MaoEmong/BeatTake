@@ -1,10 +1,12 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+import 'library_files.dart';
+import 'playback_source.dart';
 import 'song.dart';
+import 'wav_audio.dart';
 
 class StudioPlayer extends ChangeNotifier {
   StudioPlayer() {
@@ -23,7 +25,7 @@ class StudioPlayer extends ChangeNotifier {
   final _audio = AudioPlayer();
   late final StreamSubscription<void> _finished;
   late final StreamSubscription<Duration> _positions;
-  Directory? _scratch;
+  final _source = PlaybackSource();
   Future<void>? _pending;
   String? _playing;
   Duration _position = Duration.zero;
@@ -34,26 +36,29 @@ class StudioPlayer extends ChangeNotifier {
   Duration get position => _position;
   bool get busy => _busy;
 
-  Future<void> toggleFile(String path) => _toggle(path, () async => path);
+  Future<void> toggleFile(String key, LibraryFiles files) =>
+      _toggle(key, () => files.audio(key));
 
   Future<void> toggleSong(
     String id,
     List<SoundPlacement> placements,
-    Map<String, String> paths,
+    Map<String, String> keys,
+    LibraryFiles files,
   ) => _toggle(id, () async {
-    final directory = _scratch ??= await Directory.systemTemp.createTemp(
-      'beats_mix_',
-    );
-    final output = File.fromUri(directory.uri.resolve('mix.wav')).path;
-    await compute(_renderMix, (
+    final clips = <String, AudioInput>{};
+    for (final id in placements.map((placement) => placement.clipId).toSet()) {
+      final key = keys[id];
+      if (key == null) throw const FormatException('Missing audio');
+      clips[id] = await files.audio(key);
+    }
+    final output = await compute(_renderMix, (
       placements: placements,
-      paths: paths,
-      output: output,
+      clips: clips,
     ));
-    return output;
+    return AudioInput.memory(output);
   });
 
-  Future<void> _toggle(String id, Future<String> Function() source) async {
+  Future<void> _toggle(String id, Future<AudioInput> Function() source) async {
     if (_busy || _closed) return;
     final operation = _play(id, source);
     _pending = operation;
@@ -64,17 +69,19 @@ class StudioPlayer extends ChangeNotifier {
     }
   }
 
-  Future<void> _play(String id, Future<String> Function() source) async {
+  Future<void> _play(String id, Future<AudioInput> Function() source) async {
     final shouldStop = _playing == id;
     _busy = true;
     _refresh();
     try {
       await stop();
       if (shouldStop || _closed) return;
-      final path = await source();
+      final input = await source();
+      if (_closed) return;
+      final playable = await _source.prepare(input);
       if (_closed) return;
       _playing = id;
-      await _audio.play(DeviceFileSource(path, mimeType: 'audio/wav'));
+      await _audio.play(playable);
     } catch (_) {
       _playing = null;
       rethrow;
@@ -103,11 +110,10 @@ class StudioPlayer extends ChangeNotifier {
     }
     await _finished.cancel();
     await _positions.cancel();
-    await _audio.dispose();
     try {
-      await _scratch?.delete(recursive: true);
-    } on FileSystemException {
-      // The operating system may already have removed the preview.
+      await _audio.dispose();
+    } finally {
+      await _source.dispose();
     }
   }
 
@@ -119,9 +125,6 @@ class StudioPlayer extends ChangeNotifier {
   }
 }
 
-void _renderMix(
-  ({List<SoundPlacement> placements, Map<String, String> paths, String output})
-  input,
-) {
-  SongMix.render(input.placements, input.paths, input.output);
-}
+Uint8List _renderMix(
+  ({List<SoundPlacement> placements, Map<String, AudioInput> clips}) input,
+) => SongMix.preview(input.placements, input.clips);

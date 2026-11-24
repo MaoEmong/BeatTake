@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+import 'library_files.dart';
 import 'song.dart';
 
 class SavedSong {
@@ -18,26 +22,25 @@ class SavedSong {
 }
 
 class SongStore {
-  SongStore(Directory recordings)
-    : _directory = Directory.fromUri(recordings.uri.resolve('songs/'));
+  SongStore(this.files);
 
   static final _songFile = RegExp(r'^song_(\d+)\.json$');
   static final _songId = RegExp(r'^\d+$');
   static const _maxDateMilliseconds = 8640000000000000;
-  final Directory _directory;
+  final LibraryFiles files;
 
   Future<List<SavedSong>> list({void Function()? onUnreadable}) async {
-    await _directory.create(recursive: true);
     final songs = <SavedSong>[];
-    await for (final entry in _directory.list(followLinks: false)) {
-      if (entry is! File) continue;
-      final match = _songFile.firstMatch(entry.uri.pathSegments.last);
+    for (final key in await files.list('songs/')) {
+      final match = _songFile.firstMatch(key.substring('songs/'.length));
       if (match == null) continue;
       try {
-        songs.add(await _read(entry, match.group(1)!));
+        songs.add(await _read(key, match.group(1)!));
       } catch (error) {
         if (onUnreadable == null ||
-            (error is! FormatException && error is! FileSystemException)) {
+            (error is! FormatException &&
+                error is! FileSystemException &&
+                error is! LibraryFileException)) {
           rethrow;
         }
         onUnreadable();
@@ -71,20 +74,22 @@ class SongStore {
           .map((placement) => placement.toJson())
           .toList(),
     });
-    await _directory.create(recursive: true);
-    final draft = await _directory.createTemp('draft_');
-    try {
-      final temporary = File.fromUri(draft.uri.resolve('song.json'));
-      await temporary.writeAsString(body, flush: true);
-      await temporary.rename(file.path);
-    } finally {
-      await draft.delete(recursive: true);
-    }
+    await files.update(() async {
+      if (kIsWeb && placements.isNotEmpty) {
+        final clips = (await files.list('clips/', minLength: 45)).toSet();
+        if (placements.any(
+          (placement) => !clips.contains('clips/${placement.clipId}'),
+        )) {
+          throw const FormatException('A sound was removed from the library');
+        }
+      }
+      await files.write(file, Uint8List.fromList(utf8.encode(body)));
+    });
     return song;
   }
 
   Future<void> delete(SavedSong song) async {
-    await _file(song.id).delete();
+    await files.delete(_file(song.id));
   }
 
   Future<bool> usesClip(String id) async {
@@ -94,8 +99,8 @@ class SongStore {
     );
   }
 
-  Future<SavedSong> _read(File file, String id) async {
-    final body = jsonDecode(await file.readAsString());
+  Future<SavedSong> _read(String key, String id) async {
+    final body = jsonDecode(utf8.decode(await files.read(key)));
     if (body
         case {
           'version': 1,
@@ -117,8 +122,8 @@ class SongStore {
     throw const FormatException('Invalid saved song');
   }
 
-  File _file(String id) {
+  String _file(String id) {
     if (!_songId.hasMatch(id)) throw const FormatException('Invalid song ID');
-    return File.fromUri(_directory.uri.resolve('song_$id.json'));
+    return 'songs/song_$id.json';
   }
 }

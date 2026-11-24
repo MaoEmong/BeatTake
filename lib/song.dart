@@ -49,6 +49,23 @@ class SongMix {
     List<SoundPlacement> placements,
     Map<String, String> clipPaths,
     String outputPath,
+  ) => WavFile.write(
+    outputPath,
+    sampleRate,
+    _mix(placements, {
+      for (final entry in clipPaths.entries)
+        entry.key: AudioInput.file(entry.value),
+    }),
+  );
+
+  static Uint8List preview(
+    List<SoundPlacement> placements,
+    Map<String, AudioInput> clips,
+  ) => WavFile.encode(sampleRate, _mix(placements, clips));
+
+  static Int16List _mix(
+    List<SoundPlacement> placements,
+    Map<String, AudioInput> clips,
   ) {
     if (placements.isEmpty || placements.length > SoundPlacement.maxCount) {
       throw const FormatException('Invalid song size');
@@ -57,15 +74,15 @@ class SongMix {
     final audioFiles = <String, WavFile>{};
     var totalFrames = 0;
     for (final placement in placements) {
-      final path = clipPaths[placement.clipId];
-      if (path == null ||
+      final input = clips[placement.clipId];
+      if (input == null ||
           placement.startMs < 0 ||
           placement.startMs > SoundPlacement.maxStartMs) {
         throw const FormatException('Missing or misplaced audio');
       }
       final audio = audioFiles.putIfAbsent(
         placement.clipId,
-        () => WavFile.open(path),
+        () => WavFile.read(input),
       );
       final start = (placement.startMs * sampleRate / 1000).round();
       final length = math.max(
@@ -102,6 +119,6 @@ class SongMix {
     for (var index = 0; index < totalFrames; index++) {
       samples[index] = (mixed[index] * scale).round();
     }
-    WavFile.write(outputPath, sampleRate, samples);
+    return samples;
   }
 }

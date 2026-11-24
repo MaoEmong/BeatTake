@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
@@ -32,7 +31,7 @@ class _RecorderPageState extends State<RecorderPage> {
   late final StreamSubscription<RecordStop> _captureStops;
   StreamSubscription<Amplitude>? _meter;
   Timer? _ticker;
-  File? _draft;
+  RecordingDraft? _draft;
   List<double> _levels = [];
   bool _busy = false;
   bool _startingCapture = false;
@@ -159,8 +158,8 @@ class _RecorderPageState extends State<RecorderPage> {
     try {
       await _meter?.cancel();
       _meter = null;
-      await _recorder.stop();
-      recording = await widget.store.save(draft);
+      final result = await _recorder.stop();
+      recording = await widget.store.save(draft, result: result);
       if (mounted) {
         setState(() {
           _hasRecording = true;

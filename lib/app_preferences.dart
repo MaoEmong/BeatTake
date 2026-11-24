@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'copy.dart';
@@ -28,8 +29,11 @@ class PreferenceStore {
       accessibility: KeychainAccessibility.unlocked_this_device,
     ),
   );
-  static const _preferencesKey = 'studio_preferences';
+  static const _preferencesKey = kIsWeb
+      ? 'beattake_preferences'
+      : 'studio_preferences';
   static const _openAiKey = 'openai_api_key';
+  static String? _browserOpenAiKey;
 
   Future<AppPreferences> load() async {
     final data = await _storage.read(key: _preferencesKey);
@@ -57,9 +61,16 @@ class PreferenceStore {
     }),
   );
 
-  Future<String?> readOpenAiKey() => _storage.read(key: _openAiKey);
+  Future<String?> readOpenAiKey() async =>
+      kIsWeb ? _browserOpenAiKey : _storage.read(key: _openAiKey);
 
-  Future<void> saveOpenAiKey(String? key) => key == null
-      ? _storage.delete(key: _openAiKey)
-      : _storage.write(key: _openAiKey, value: key);
+  Future<void> saveOpenAiKey(String? key) async {
+    if (kIsWeb) {
+      _browserOpenAiKey = key;
+    } else if (key == null) {
+      await _storage.delete(key: _openAiKey);
+    } else {
+      await _storage.write(key: _openAiKey, value: key);
+    }
+  }
 }

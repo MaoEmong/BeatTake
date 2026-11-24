@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:everyday_beats/library_files_native.dart';
 import 'package:everyday_beats/song.dart';
 import 'package:everyday_beats/song_store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +13,7 @@ void main() {
         'beats_song_test_',
       );
       addTearDown(() => directory.delete(recursive: true));
-      final store = SongStore(directory);
+      final store = SongStore(LocalLibraryFiles(directory));
       final song = await store.save(name: '첫 곡', placements: const []);
       await store.save(
         id: song.id,
@@ -22,7 +23,7 @@ void main() {
         ],
       );
 
-      final reopened = SongStore(directory);
+      final reopened = SongStore(LocalLibraryFiles(directory));
       final loaded = (await reopened.list()).single;
       expect(loaded.id, song.id);
       expect(loaded.name, '수정한 곡');

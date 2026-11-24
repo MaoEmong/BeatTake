@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:everyday_beats/library_files_native.dart';
 import 'package:everyday_beats/recorder_page.dart';
 import 'package:everyday_beats/recording_store.dart';
 import 'package:everyday_beats/wav_audio.dart';
@@ -31,7 +32,7 @@ void main() {
         'beats_recorder_test_',
       );
       addTearDown(() => directory.deleteSync(recursive: true));
-      final store = RecordingStore(directory);
+      final store = RecordingStore(LocalLibraryFiles(directory));
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pumpWidget(
         MaterialApp(home: RecorderPage(store: store, openEditor: false)),
@@ -65,7 +66,12 @@ void main() {
       expect(savedMessage, findsOneWidget);
       expect(native.stopCalls, 1);
       final saved = (await tester.runAsync(store.list))!.single;
-      expect(WavFile.open(saved.file.path).durationMs, 1000);
+      expect(
+        WavFile.read(
+          (await tester.runAsync(() => store.files.audio(saved.key)))!,
+        ).durationMs,
+        1000,
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

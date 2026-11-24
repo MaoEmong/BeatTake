@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'clip_editor_page.dart';
 import 'copy.dart';
 import 'recording_store.dart';
-import 'song_store.dart';
 import 'studio_player.dart';
 import 'studio_widgets.dart';
 
@@ -59,7 +58,7 @@ class _SoundsPageState extends State<SoundsPage> {
   Future<void> _play(SavedRecording sound) async {
     setState(() => _message = null);
     try {
-      await _player.toggleFile(sound.file.path);
+      await _player.toggleFile(sound.key, widget.store.files);
     } catch (_) {
       if (mounted) setState(() => _message = L.soundPlayFailed);
     }
@@ -94,12 +93,7 @@ class _SoundsPageState extends State<SoundsPage> {
           !mounted) {
         return;
       }
-      if (edited &&
-          await SongStore(widget.store.directory).usesClip(sound.id)) {
-        if (mounted) setState(() => _message = L.inUse);
-        return;
-      }
-      if (_player.playing == sound.file.path) await _player.stop();
+      if (_player.playing == sound.key) await _player.stop();
       await widget.store.delete(sound, edited: edited);
       if (mounted) {
         setState(() {
@@ -107,6 +101,8 @@ class _SoundsPageState extends State<SoundsPage> {
           _message = null;
         });
       }
+    } on ClipInUse {
+      if (mounted) setState(() => _message = L.inUse);
     } catch (_) {
       if (mounted) setState(() => _message = L.removeError);
     } finally {
@@ -205,12 +201,12 @@ class _SoundsPageState extends State<SoundsPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      tooltip: (_player.playing == sound.file.path
+                      tooltip: (_player.playing == sound.key
                           ? L.stopPlayback
                           : L.play)(context),
                       onPressed: active ? () => _play(sound) : null,
                       icon: Icon(
-                        _player.playing == sound.file.path
+                        _player.playing == sound.key
                             ? Icons.stop_rounded
                             : Icons.play_arrow_rounded,
                       ),

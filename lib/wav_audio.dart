@@ -1,11 +1,20 @@
-import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-class WavFile {
-  WavFile._(this.path, this.sampleRate, this.frames, this._dataOffset);
+import 'wav_file_access.dart';
 
-  final String path;
+class AudioInput {
+  const AudioInput.file(String value) : path = value, bytes = null;
+  const AudioInput.memory(Uint8List value) : path = null, bytes = value;
+
+  final String? path;
+  final Uint8List? bytes;
+}
+
+class WavFile {
+  WavFile._(this._input, this.sampleRate, this.frames, this._dataOffset);
+
+  final AudioInput _input;
   final int sampleRate;
   final int frames;
   final int _dataOffset;
@@ -16,8 +25,10 @@ class WavFile {
   // phones with limited memory, even when the original recording is longer.
   static const maxPreviewSeconds = 300;
 
-  static WavFile open(String path) {
-    final file = File(path).openSync();
+  static WavFile open(String path) => read(AudioInput.file(path));
+
+  static WavFile read(AudioInput input) {
+    final file = _WavReader(input);
     try {
       final header = file.readSync(12);
       if (header.length != 12 ||
@@ -26,7 +37,7 @@ class WavFile {
         throw const FormatException('Invalid WAV file');
       }
 
-      final fileLength = file.lengthSync();
+      final fileLength = file.length;
       int? sampleRate;
       int? dataOffset;
       int? dataSize;
@@ -65,7 +76,7 @@ class WavFile {
           dataSize.isOdd) {
         throw const FormatException('Missing or unsupported WAV audio');
       }
-      return WavFile._(path, sampleRate, dataSize ~/ 2, dataOffset);
+      return WavFile._(input, sampleRate, dataSize ~/ 2, dataOffset);
     } finally {
       file.closeSync();
     }
@@ -76,7 +87,7 @@ class WavFile {
     if (end <= start || end - start > sampleRate * maxPreviewSeconds) {
       throw const FormatException('Invalid preview length');
     }
-    final file = File(path).openSync();
+    final file = _WavReader(_input);
     try {
       file.setPositionSync(_dataOffset + start * 2);
       final bytes = file.readSync((end - start) * 2);
@@ -105,7 +116,7 @@ class WavFile {
   }
 
   List<double> peaks({int bars = 60}) {
-    final file = File(path).openSync();
+    final file = _WavReader(_input);
     try {
       return List.generate(bars, (index) {
         final start = frames * index ~/ bars;
@@ -142,9 +153,13 @@ class WavFile {
     return output;
   }
 
-  static void write(String path, int sampleRate, Int16List samples) {
+  static void write(String path, int sampleRate, Int16List samples) =>
+      writeWavFile(path, encode(sampleRate, samples));
+
+  static Uint8List encode(int sampleRate, Int16List samples) {
     final sampleBytes = samples.length * 2;
-    final header = ByteData(44)
+    final bytes = Uint8List(44 + sampleBytes);
+    final data = ByteData.sublistView(bytes)
       ..setUint32(0, 0x52494646) // RIFF
       ..setUint32(4, 36 + sampleBytes, Endian.little)
       ..setUint32(8, 0x57415645) // WAVE
@@ -158,22 +173,45 @@ class WavFile {
       ..setUint16(34, 16, Endian.little)
       ..setUint32(36, 0x64617461) // data
       ..setUint32(40, sampleBytes, Endian.little);
-    final file = File(path).openSync(mode: FileMode.write);
-    try {
-      file.writeFromSync(header.buffer.asUint8List());
-      if (Endian.host == Endian.little) {
-        file.writeFromSync(
-          samples.buffer.asUint8List(samples.offsetInBytes, sampleBytes),
-        );
-      } else {
-        final data = ByteData(sampleBytes);
-        for (var index = 0; index < samples.length; index++) {
-          data.setInt16(index * 2, samples[index], Endian.little);
-        }
-        file.writeFromSync(data.buffer.asUint8List());
+    if (Endian.host == Endian.little) {
+      bytes.setRange(
+        44,
+        bytes.length,
+        samples.buffer.asUint8List(samples.offsetInBytes, sampleBytes),
+      );
+    } else {
+      for (var index = 0; index < samples.length; index++) {
+        data.setInt16(44 + index * 2, samples[index], Endian.little);
       }
-    } finally {
-      file.closeSync();
     }
+    return bytes;
+  }
+}
+
+class _WavReader {
+  _WavReader(AudioInput input)
+    : _bytes = input.bytes,
+      _disk = input.path == null ? null : WavDiskReader(input.path!);
+
+  final Uint8List? _bytes;
+  final WavDiskReader? _disk;
+  int _position = 0;
+
+  int get length => _bytes?.length ?? _disk!.length;
+  int positionSync() => _position;
+  void setPositionSync(int offset) => _position = offset;
+  void closeSync() => _disk?.close();
+
+  Uint8List readSync(int count) {
+    final data = _bytes;
+    final bytes = data == null
+        ? _disk!.read(_position, count)
+        : Uint8List.sublistView(
+            data,
+            _position,
+            math.min(_position + count, data.length),
+          );
+    _position += bytes.length;
+    return bytes;
   }
 }

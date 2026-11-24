@@ -20,7 +20,7 @@ class SongsPage extends StatefulWidget {
 
 class _SongsPageState extends State<SongsPage> {
   final _player = StudioPlayer();
-  late final _store = SongStore(widget.recordings.directory);
+  late final _store = SongStore(widget.recordings.files);
   List<SavedSong> _songs = [];
   List<SavedRecording> _clips = [];
   bool _busy = true;
@@ -82,8 +82,8 @@ class _SongsPageState extends State<SongsPage> {
     setState(() => _error = null);
     try {
       await _player.toggleSong(song.id, song.placements, {
-        for (final clip in _clips) clip.id: clip.file.path,
-      });
+        for (final clip in _clips) clip.id: clip.key,
+      }, widget.recordings.files);
     } catch (_) {
       if (mounted) setState(() => _error = L.songPlayFailed);
     }
