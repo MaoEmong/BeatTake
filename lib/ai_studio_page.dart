@@ -17,12 +17,14 @@ class AiStudioPage extends StatefulWidget {
     super.key,
     required this.store,
     required this.preferences,
+    required this.arranger,
     required this.openSettings,
     required this.onSaved,
   });
 
   final RecordingStore store;
   final PreferenceStore preferences;
+  final AiArranger arranger;
   final VoidCallback openSettings;
   final VoidCallback onSaved;
 
@@ -58,7 +60,7 @@ class _AiStudioPageState extends State<AiStudioPage> {
       if (mounted) setState(() => _error = L.storageError);
     }
     try {
-      final key = await widget.preferences.readGeminiKey();
+      final key = await widget.preferences.readAiKey(widget.arranger.provider);
       if (mounted) setState(() => _hasKey = key?.isNotEmpty == true);
     } catch (_) {
       if (mounted) setState(() => _error ??= L.keyLoadFailed);
@@ -80,7 +82,7 @@ class _AiStudioPageState extends State<AiStudioPage> {
       _error = null;
     });
     try {
-      final key = await widget.preferences.readGeminiKey();
+      final key = await widget.preferences.readAiKey(widget.arranger.provider);
       if (!mounted) return;
       if (key == null || key.isEmpty) {
         setState(() {
@@ -95,7 +97,7 @@ class _AiStudioPageState extends State<AiStudioPage> {
         setState(() => _error = L.soundOpenFailed);
         return;
       }
-      final placements = await AiArranger().arrange(
+      final placements = await widget.arranger.arrange(
         key: key,
         request: request,
         sounds: [
@@ -149,6 +151,7 @@ class _AiStudioPageState extends State<AiStudioPage> {
   @override
   Widget build(BuildContext context) {
     final names = clipNames(context, _clips);
+    final provider = widget.arranger.provider.label;
     return StudioList(
       title: L.makeAiSong(context),
       children: [
@@ -161,14 +164,14 @@ class _AiStudioPageState extends State<AiStudioPage> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 6),
-              Text(L.aiHelp(context)),
+              Text(L.aiHelp(context, provider)),
             ],
           ),
         ),
         const SizedBox(height: 12),
         if (_loading || _busy) const LinearProgressIndicator(),
         if (!_loading && !_hasKey) ...[
-          Text(L.aiNoKey(context)),
+          Text(L.aiNoKey(context, provider)),
           const SizedBox(height: 6),
           OutlinedButton.icon(
             onPressed: widget.openSettings,
@@ -178,7 +181,7 @@ class _AiStudioPageState extends State<AiStudioPage> {
           const SizedBox(height: 12),
         ],
         if (_error case final message?) ...[
-          Semantics(liveRegion: true, child: Text(message(context))),
+          Semantics(liveRegion: true, child: Text(message(context, provider))),
           if (message == L.storageError)
             OutlinedButton(
               onPressed: _loading ? null : _load,

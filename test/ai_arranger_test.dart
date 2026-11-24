@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:everyday_beats/ai_arranger.dart';
+import 'package:everyday_beats/ai_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -36,8 +37,9 @@ void main() {
       );
       await request.response.close();
     });
-    final arranger = AiArranger(
-      endpoint: Uri.parse('http://127.0.0.1:${server.port}/arrange'),
+    final arranger = AiArranger.forEndpoint(
+      AiProvider.gemini,
+      Uri.parse('http://127.0.0.1:${server.port}/arrange'),
     );
     const sounds = [
       (clipId: 'clip_1_private_filename.wav', name: '책상', durationMs: 500),
