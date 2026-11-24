@@ -40,9 +40,9 @@ $vibeFlutter = 'E:\portfolio\ieum\.build-tools\flutter\bin\flutter.bat'
 | [lib/recording_store.dart](../lib/recording_store.dart) | 녹음 파일을 저장하고, 앱이 다시 열릴 때 목록을 읽는다. |
 | [lib/wav_audio.dart](../lib/wav_audio.dart) | 녹음 파일에서 선택 구간을 읽고 음 높이를 바꾼다. |
 | [lib/song.dart](../lib/song.dart), [lib/song_store.dart](../lib/song_store.dart) | 각 소리의 배치에 맞춰 합친 재생 파일을 만들고, 곡의 배치를 저장한다. |
-| [lib/ai_arranger.dart](../lib/ai_arranger.dart) | Gemini에 배치안을 요청하고 앱에서 쓸 수 있는 결과인지 검사한다. |
+| [lib/ai_arranger.dart](../lib/ai_arranger.dart) | 선택한 AI 서비스에 배치안을 요청하고 앱에서 쓸 수 있는 결과인지 검사한다. |
 | [lib/track_editor_page.dart](../lib/track_editor_page.dart) | 곡의 전체 배치와 선택한 트랙을 보여 주고, 소리의 트랙과 시작 시간을 바꾼다. |
-| [lib/settings_page.dart](../lib/settings_page.dart), [lib/copy.dart](../lib/copy.dart) | 설정, 언어별 앱 문구, Gemini 키 등록을 담당한다. |
+| [lib/settings_page.dart](../lib/settings_page.dart), [lib/copy.dart](../lib/copy.dart) | 설정, 언어별 앱 문구, 서비스 선택과 키 등록을 담당한다. |
 | [test/recording_store_test.dart](../test/recording_store_test.dart) | 새로 저장소를 열었을 때 파일을 다시 찾는지, 빈 녹음이 목록에 올라오지 않는지 확인한다. |
 | [pubspec.yaml](../pubspec.yaml) | 녹음은 `record`, 재생은 `audioplayers`, 앱 저장 위치 확인은 `path_provider`를 사용한다. |
 
@@ -52,7 +52,15 @@ $vibeFlutter = 'E:\portfolio\ieum\.build-tools\flutter\bin\flutter.bat'
 
 다듬은 소리는 `recordings/clips/`에 별도 WAV 파일로 저장한다. 음을 높이면 소리가 짧아지고, 낮추면 길어진다. 편집해서 저장하거나 곡으로 재생할 수 있는 길이는 최대 5분이다. 곡의 이름과 각 소리의 트랙 및 시작 시간은 `recordings/songs/`에 저장한다. 저장된 곡에 들어 있는 소리를 삭제하려면 해당 곡에서 배치를 먼저 지운다.
 
-AI 편곡에는 개인 Gemini 키가 필요하다. 키는 기기의 보안 저장소에 보관하고, 편곡을 요청할 때 선택한 소리의 이름과 길이, 사용자가 입력한 요청만 Gemini에 보낸다. 배치안을 받아도 곡 파일에는 **곡 저장**을 눌렀을 때 반영된다.
+AI 편곡에는 선택한 서비스의 개인 API 키가 필요하다. Gemini, Claude, OpenAI의 키는 기기의 보안 저장소에 따로 보관한다. 기존 앱에 저장했던 Gemini 키도 계속 쓸 수 있다. 편곡할 때 선택한 소리의 이름과 길이, 사용자가 입력한 요청을 현재 선택한 서비스에만 보낸다. 배치안을 받아도 곡 파일에는 **곡 저장**을 눌렀을 때 반영된다.
+
+편곡에 쓰는 모델은 Gemini 3.5 Flash-Lite, Claude Haiku 5.5, GPT-6 Luna다. 앱은 어느 서비스의 답이든 모든 선택한 소리가 들어 있는지, 트랙과 시작 시간이 범위 안에 있는지, 곡 전체가 5분 이내인지 확인한 뒤 편집 화면을 연다.
+
+### AI 서비스 선택 확인
+
+- 코드 검사와 자동 테스트 15개가 통과했다. 테스트 서버에서 세 서비스의 응답 형식을 각각 확인했다. 앱에서 선택한 서비스에 해당 서비스 키만 보내는지와, 받은 배치가 같은 곡 편집 화면에서 열리는지를 검사했다.
+- Android 15 가상 휴대폰에서 이전 설치의 Gemini 키를 그대로 읽었다. Claude와 OpenAI 키는 따로 등록했고, 앱을 다시 열어 서비스 선택이 유지되는지 확인했다. OpenAI 키만 지워도 Gemini와 Claude 키는 유지됐다.
+- 실제 OpenAI 요청은 테스트 소리 두 개를 포함한 배치 12개를 반환했다. 안드로이드 설치본에서 세 실제 서비스가 잘못된 시험용 키를 거부하면 선택한 서비스 이름으로 안내가 나왔다. Gemini와 Claude의 실제 성공 응답은 유효한 키가 없어 확인 전이다.
 
 ## 트랙 렌즈 1차 MVP
 
