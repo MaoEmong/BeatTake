@@ -1,5 +1,7 @@
 # BeatTake
 
+[한국어 README](README.ko.md)
+
 Turn the sounds around you into music, wherever you are. Record a desk tap, a zipper, or a footstep, then trim and layer those sounds into a short track on your phone.
 
 Built for Vibe Forge by **Emong**.
